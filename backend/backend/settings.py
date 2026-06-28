@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.emails',
     'apps.remainders',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
