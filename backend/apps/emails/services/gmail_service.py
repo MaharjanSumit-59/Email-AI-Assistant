@@ -9,6 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from rest_framework.exceptions import APIException
+from apps.authentication.models import GoogleToken
 
 import logging
 logger = logging.getLogger(__name__)
@@ -30,33 +31,43 @@ class GmailService:
     - Delete emails
     """
 
-    def __init__(self, access_token, refresh_token):
+    def __init__(self, user):
         """
-        Initialize Gmail API client.
+        Initialize Gmail service using the logged-in user's
+        stored Google OAuth tokens.
+        """
 
-        Parameters:
-            access_token (str): OAuth access token
-            refresh_token (str): OAuth refresh token
-        """
+        try:
+            google_token = GoogleToken.objects.get(user=user)
+
+        except GoogleToken.DoesNotExist:
+            raise APIException("Google account is not connected.")
 
         self.credentials = Credentials(
-            token=access_token,
-            refresh_token=refresh_token,
-            token_uri=settings.GOOGLE_TOKEN_URI,
+            token=google_token.access_token,
+            refresh_token=google_token.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
             client_id=settings.GOOGLE_CLIENT_ID,
             client_secret=settings.GOOGLE_CLIENT_SECRET,
+            scopes=google_token.scope.split()
+            if google_token.scope
+            else settings.GOOGLE_SCOPES,
         )
 
-        # Refresh token automatically if expired
+        # Automatically refresh expired access token
         if self.credentials.expired and self.credentials.refresh_token:
+
             self.credentials.refresh(Request())
+
+            google_token.access_token = self.credentials.token
+
+            google_token.save(update_fields=["access_token"])
 
         self.service = build(
             "gmail",
             "v1",
             credentials=self.credentials
         )
-
     # -------------------------------------------------------
     # PROFILE
     # -------------------------------------------------------

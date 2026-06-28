@@ -2,6 +2,8 @@ from email.utils import parsedate_to_datetime
 from rest_framework.response import Response
 from .services.gmail_service import GmailService
 
+from rest_framework.exceptions import AuthenticationFailed
+
 
 def parse_headers(headers):
     """
@@ -30,39 +32,13 @@ def parse_headers(headers):
 
 def get_gmail_service(request):
     """
-    Returns authenticated GmailService.
-
-    This is currently using placeholder tokens.
-    Later replace this with Authentication App.
+    Returns an authenticated GmailService instance for the logged-in user.
     """
 
-    # ---------------------------------------
-    # TODO
-    # Replace after authentication is complete
-    # ---------------------------------------
+    if not request.user.is_authenticated:
+        raise AuthenticationFailed("User is not authenticated.")
 
-    '''
-    def get_gmail_service(request):
-
-    google_account = request.user.google_account
-
-    return GmailService(
-
-        access_token=google_account.access_token,
-
-        refresh_token=google_account.refresh_token
-
-    )
-    '''
-
-    access_token = "ACCESS_TOKEN"
-
-    refresh_token = "REFRESH_TOKEN"
-
-    return GmailService(
-        access_token,
-        refresh_token
-    )
+    return GmailService(request.user)
 
 def success_response(data=None, message="Success", status_code=200):
     """

@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.emails',
     'apps.remainders',
-    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -153,8 +152,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = "users.User"
-
-
 
 
 

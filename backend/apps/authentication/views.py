@@ -1,27 +1,33 @@
 from django.shortcuts import redirect
-from rest_framework.views import APIView
 from django.http import JsonResponse
 
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+
 from .services import (
+    build_google_auth_url,
     exchange_code_for_token,
     get_google_user,
-    build_google_auth_url,
+    create_or_update_user,
+    save_google_tokens,
+    generate_jwt,
 )
 
 
 class GoogleLoginView(APIView):
 
-    authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
 
-        return redirect(build_google_auth_url())
-    
+        return redirect(
+            build_google_auth_url()
+        )
+
+
 class GoogleCallbackView(APIView):
 
-    authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
 
@@ -29,14 +35,37 @@ class GoogleCallbackView(APIView):
 
         tokens = exchange_code_for_token(code)
 
-        user = get_google_user(
+        google_user = get_google_user(
             tokens["access_token"]
         )
 
+        user = create_or_update_user(
+            google_user
+        )
+
+        save_google_tokens(
+            user,
+            tokens
+        )
+
+        jwt = generate_jwt(user)
+
         return JsonResponse({
 
-            "google_user": user,
+            "message": "Login Successful",
 
-            "tokens": tokens
+            "user": {
+
+                "email": user.email,
+
+                "first_name": user.first_name,
+
+                "last_name": user.last_name,
+
+                "profile_picture": user.profile_picture,
+
+            },
+
+            "jwt": jwt
 
         })
