@@ -17,10 +17,25 @@ class Reminder(models.Model):
         ("CANCELLED", "Cancelled"),
     ]
 
+    class ReminderType(models.TextChoices):
+        SCHEDULE_EMAIL = "SCHEDULE_EMAIL", "Schedule an Email"
+        REMIND_ME = "REMIND_ME", "Remind Me"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="reminders"
+    )
+
+    # SCHEDULE_EMAIL: the drafted email below is actually sent to
+    #   `recipient` at scheduled_time, via Gmail.
+    # REMIND_ME: no email is ever sent — this exists purely as a
+    #   personal reminder. subject/body still get used as the title
+    #   and description of the Calendar event.
+    reminder_type = models.CharField(
+        max_length=20,
+        choices=ReminderType.choices,
+        default=ReminderType.SCHEDULE_EMAIL,
     )
 
     recipient = models.EmailField()

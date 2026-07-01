@@ -41,9 +41,15 @@ class CalendarService(BaseGoogleService):
         end_time,
         timezone="Asia/Kathmandu",
         attendees=None,
+        reminder_minutes_before=None,
     ):
         """
         Create a Google Calendar event.
+
+        reminder_minutes_before: if set, overrides Calendar's default
+        reminders with a single popup notification that many minutes
+        before the event starts (e.g. 30). If None, Calendar's normal
+        default reminders apply.
         """
 
         attendees = attendees or []
@@ -63,6 +69,17 @@ class CalendarService(BaseGoogleService):
                 {"email": email} for email in attendees
             ],
         }
+
+        if reminder_minutes_before is not None:
+            event["reminders"] = {
+                "useDefault": False,
+                "overrides": [
+                    {
+                        "method": "popup",
+                        "minutes": reminder_minutes_before,
+                    },
+                ],
+            }
 
         try:
             created = (

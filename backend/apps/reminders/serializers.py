@@ -9,6 +9,7 @@ class ReminderSerializer(serializers.ModelSerializer):
 
         fields = (
             "id",
+            "reminder_type",
             "recipient",
             "subject",
             "body",

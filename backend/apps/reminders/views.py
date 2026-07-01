@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Reminder
 from .serializers import ReminderSerializer
 from .calendar_service import CalendarService
+from .services import ReminderService
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,8 @@ class ReminderListCreateView(generics.ListCreateAPIView):
         ).order_by("-scheduled_time")
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        reminder = serializer.save(user=self.request.user)
+        ReminderService.create_calendar_event(reminder)
 
 
 class ReminderDetailView(generics.RetrieveUpdateDestroyAPIView):

@@ -3,7 +3,6 @@ from django.utils import timezone
 
 from .models import Reminder
 from .services import ReminderService
-from apps.reminders.calendar_service import CalendarService
 
 
 # ----------------------------------------------------
@@ -33,47 +32,29 @@ def check_due_reminders():
 @shared_task
 def send_reminder_email(reminder_id):
     """
-    Process one reminder:
-    1. Send email
-    2. Create Google Calendar event
-    3. Mark as SENT or FAILED
+    Process one due reminder:
+    1. SCHEDULE_EMAIL -> send the email. REMIND_ME -> no email.
+    2. Ensure a Google Calendar event exists (normally already
+       created when the reminder was scheduled — this is a fallback
+       in case that earlier creation failed).
+    3. Mark as SENT or FAILED.
     """
 
     try:
         reminder = Reminder.objects.get(id=reminder_id)
-        user = reminder.user
 
         # -------------------------
-        # 1. SEND EMAIL
+        # 1. SEND EMAIL (or skip, for REMIND_ME)
         # -------------------------
-        ReminderService.send_scheduled_email(reminder)
-
-        # -------------------------
-        # 2. GOOGLE CALENDAR EVENT
-        # -------------------------
-        try:
-            calendar = CalendarService(user)
-
-            event = calendar.create_event(
-                title=reminder.subject,
-                description=reminder.body,
-                start_time=reminder.scheduled_time,
-                end_time=reminder.scheduled_time,
-            )
-
-            reminder.calendar_event_id = event.get("id")
-
-        except Exception as e:
-            print("Calendar error:", e)
+        ReminderService.process_due_reminder(reminder)
 
         # -------------------------
-        # 3. MARK AS SENT
+        # 2. CALENDAR FALLBACK
         # -------------------------
-        reminder.status = "SENT"
-        reminder.sent_at = timezone.now()
-        reminder.save()
+        if not reminder.calendar_event_id:
+            ReminderService.create_calendar_event(reminder)
 
-        print(f"Reminder {reminder.id} sent successfully.")
+        print(f"Reminder {reminder.id} processed successfully.")
 
     except Exception as e:
         import traceback
