@@ -4,6 +4,12 @@ from django.db import models
 
 class Reminder(models.Model):
 
+    calendar_event_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("SENT", "Sent"),
