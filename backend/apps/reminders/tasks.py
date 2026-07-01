@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from .models import Reminder
 from .services import ReminderService
-from apps.reminders.calender_service import CalendarService
+from apps.reminders.calendar_service import CalendarService
 
 
 # ----------------------------------------------------
@@ -76,7 +76,9 @@ def send_reminder_email(reminder_id):
         print(f"Reminder {reminder.id} sent successfully.")
 
     except Exception as e:
+        import traceback
         print("Reminder processing failed:", e)
+        traceback.print_exc()
 
         try:
             reminder.status = "FAILED"

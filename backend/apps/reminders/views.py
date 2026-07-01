@@ -1,8 +1,13 @@
+import logging
+
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Reminder
 from .serializers import ReminderSerializer
+from .calendar_service import CalendarService
+
+logger = logging.getLogger(__name__)
 
 
 class ReminderListCreateView(generics.ListCreateAPIView):
@@ -28,3 +33,20 @@ class ReminderDetailView(generics.RetrieveUpdateDestroyAPIView):
         return Reminder.objects.filter(
             user=self.request.user
         )
+
+    def perform_destroy(self, instance):
+        if instance.calendar_event_id:
+            try:
+                CalendarService(instance.user).delete_event(
+                    instance.calendar_event_id
+                )
+            except Exception:
+                # Don't block reminder deletion if the calendar
+                # event is already gone or Google is unreachable.
+                logger.exception(
+                    "Failed to delete calendar event %s for reminder %s",
+                    instance.calendar_event_id,
+                    instance.id,
+                )
+
+        instance.delete()

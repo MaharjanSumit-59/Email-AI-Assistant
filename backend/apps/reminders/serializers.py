@@ -15,6 +15,7 @@ class ReminderSerializer(serializers.ModelSerializer):
             "scheduled_time",
             "status",
             "sent_at",
+            "calendar_event_id",
             "created_at",
             "updated_at",
         )
@@ -23,6 +24,7 @@ class ReminderSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "sent_at",
+            "calendar_event_id",
             "created_at",
             "updated_at",
         )
