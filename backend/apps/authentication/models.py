@@ -1,8 +1,11 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class GoogleToken(models.Model):
+    """
+    Stores OAuth credentials for a user's connected Google account.
+    """
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -17,6 +20,7 @@ class GoogleToken(models.Model):
         null=True,
     )
 
+    # Time when the current access token expires.
     expires_at = models.DateTimeField(
         blank=True,
         null=True,
@@ -28,9 +32,13 @@ class GoogleToken(models.Model):
         max_length=50,
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     def __str__(self):
-        return self.user.email
+        return f"{self.user.email} Google Token"

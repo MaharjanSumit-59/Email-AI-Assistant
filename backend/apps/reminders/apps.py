@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class RemaindersConfig(AppConfig):
-    name = 'apps.remainders'
+    name = 'apps.reminders'

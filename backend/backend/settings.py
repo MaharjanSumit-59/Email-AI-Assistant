@@ -50,7 +50,9 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.dashboard',
     'apps.emails',
-    'apps.remainders',
+    'apps.reminders',
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -165,3 +167,30 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
+
+# -------------------------
+# Celery Configuration
+# -------------------------
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+
+CELERY_RESULT_BACKEND = "django-db"
+
+CELERY_ACCEPT_CONTENT = ["json"]
+
+CELERY_TASK_SERIALIZER = "json"
+
+CELERY_RESULT_SERIALIZER = "json"
+
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_ENABLE_UTC = True
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "check-due-reminders": {
+        "task": "apps.reminders.tasks.check_due_reminders",
+        "schedule": crontab(minute="*"),
+    },
+}
