@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import SummarizeEmailAPIView, GenerateReplyAPIView, TestDecisionAPIView, AnalyzeEmailAPIView
+from .views import SummarizeEmailAPIView, GenerateReplyAPIView, TestDecisionAPIView, AnalyzeEmailAPIView, ExtractTasksAPIView
 
 urlpatterns = [
     path(
@@ -23,5 +23,9 @@ urlpatterns = [
     path(
     "analyze/",
     AnalyzeEmailAPIView.as_view(),
+),
+    path(
+    "tasks/",
+    ExtractTasksAPIView.as_view(),
 ),
 ]

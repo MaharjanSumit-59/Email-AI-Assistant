@@ -125,9 +125,14 @@ class AIAnalysisService:
     @staticmethod
     def get_tasks(email):
 
-        analysis = AIAnalysisService.get_or_create(email)
+        analysis = AIAnalysisService.get_or_create(
+            email
+        )
 
-        return analysis.extracted_tasks
+        if analysis.extracted_tasks:
+            return analysis.extracted_tasks
+
+        return None
 
     # --------------------------------------------------
     # SAVE METHODS

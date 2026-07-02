@@ -1,143 +1,22 @@
 """
-All prompt templates used by the AI Assistant.
+Prompt templates used by the AI application.
+
+Each function returns a complete prompt that is sent to Gemini.
 """
 
 
-def summarize_email(email_body: str) -> str:
-    return f"""
-You are an AI Email Assistant.
-
-Summarize the following email in 3-5 concise bullet points.
-
-Rules:
-- Keep important information only.
-- Mention deadlines if present.
-- Mention action items if present.
-- Ignore greetings and signatures.
-- Keep the summary professional.
-
-Email:
-
-{email_body}
-"""
-
-
-def generate_reply(email_body: str) -> str:
-    return f"""
-You are an AI Email Assistant.
-
-Generate a professional reply for the following email.
-
-Rules:
-- Be polite.
-- Keep the response concise.
-- Do not invent facts.
-- If information is missing, acknowledge it naturally.
-
-Email:
-
-{email_body}
-"""
-
-
-def classify_email(email_body: str) -> str:
-    return f"""
-You are an email classifier.
-
-Choose exactly ONE category from this list:
-
-Work
-Personal
-Finance
-Promotion
-Shopping
-Travel
-Updates
-Social
-Spam
-
-Return ONLY the category.
-
-Email:
-
-{email_body}
-"""
-
-
-def detect_priority(email_body: str) -> str:
-    return f"""
-Determine the priority of this email.
-
-Return ONLY one of:
-
-High
-Medium
-Low
-
-High:
-- urgent
-- deadlines
-- client issues
-- meeting today
-
-Medium:
-- normal work
-- follow-up
-- requests
-
-Low:
-- newsletters
-- promotions
-- advertisements
-
-Email:
-
-{email_body}
-"""
-
-
-def extract_tasks(email_body: str) -> str:
-    return f"""
-Extract all actionable tasks from this email.
-
-Return JSON in this format:
-
-[
-    {{
-        "task": "...",
-        "deadline": "..."
-    }}
-]
-
-If no tasks exist, return:
-
-[]
-
-Email:
-
-{email_body}
-"""
-
+# ==========================================================
+# EMAIL CLASSIFICATION
+# ==========================================================
 
 def analyze_email(email_body: str) -> str:
+
     return f"""
-You are an intelligent email assistant.
+You are an AI email classification assistant.
 
-Analyze the email and return ONLY valid JSON.
+Your task is to analyze the email and return ONLY valid JSON.
 
-Return exactly this format:
-
-{{
-    "category": "",
-    "priority": "",
-    "importance": "",
-    "confidence": 0.0,
-    "action": ""
-}}
-
-Rules
-
-Category must be one of:
+Allowed Categories:
 - Work
 - Personal
 - Finance
@@ -148,42 +27,129 @@ Category must be one of:
 - Social
 - Spam
 
-Priority:
+Allowed Priorities:
 - High
 - Medium
 - Low
 
-Importance:
+Allowed Importance:
 - Important
 - Routine
 
-Action:
+Allowed Actions:
 - draft
 - auto_send
 
-Confidence:
-A decimal between 0 and 1.
+Rules:
 
-Choose "draft" if:
-- Human judgement is needed
-- Business discussion
-- Negotiation
-- Meeting
-- Client issue
-- Complaint
-- Sensitive topic
-- Money involved
+1. Return ONLY JSON.
+2. No markdown.
+3. No explanations.
+4. Confidence must be between 0 and 1.
 
-Choose "auto_send" if:
-- Greeting
-- Thank you
-- Confirmation
-- Receipt acknowledgement
-- FAQ
-- Routine support
-- Status update
+JSON format:
 
-Return JSON only.
+{{
+    "category":"",
+    "priority":"",
+    "importance":"",
+    "confidence":0.95,
+    "action":""
+}}
+
+Email:
+
+{email_body}
+"""
+
+
+
+# ==========================================================
+# EMAIL SUMMARY
+# ==========================================================
+
+def summarize_email(email_body: str) -> str:
+
+    return f"""
+You are an AI email assistant.
+
+Summarize the email.
+
+Rules:
+
+- Maximum 4 sentences.
+- Ignore signatures.
+- Ignore disclaimers.
+- Mention important names.
+- Mention dates.
+- Mention deadlines.
+- Mention requested actions.
+- Keep it concise.
+
+Email:
+
+{email_body}
+"""
+
+
+# ==========================================================
+# REPLY GENERATION
+# ==========================================================
+
+def generate_reply(email_body: str) -> str:
+
+    return f"""
+You are an AI email assistant.
+
+Write a professional reply.
+
+Rules:
+
+- Friendly.
+- Professional.
+- Do not invent information.
+- If information is missing, politely acknowledge the email.
+- Do not include a subject line.
+- End naturally.
+
+Email:
+
+{email_body}
+"""
+
+
+# ==========================================================
+# TASK EXTRACTION
+# ==========================================================
+
+def extract_tasks(email_body: str) -> str:
+
+    return f"""
+You are an AI assistant specialized in extracting tasks from emails.
+
+Analyze the email and identify every actionable task.
+
+Return ONLY JSON.
+
+Each task must follow this format:
+
+[
+    {{
+        "task": "",
+        "deadline": "",
+        "person": ""
+    }}
+]
+
+Rules:
+
+- Return an empty list [] if there are no tasks.
+- Do not explain anything.
+- Do not include markdown.
+- If a deadline is missing, use null.
+- If a person is missing, use null.
+- Extract every task separately.
+- Keep task descriptions short and clear.
 
 Email:
 

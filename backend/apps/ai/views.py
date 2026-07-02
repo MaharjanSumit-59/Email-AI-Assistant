@@ -11,6 +11,7 @@ from .serializers import MessageIDSerializer
 from .summarizer import EmailSummarizer
 from .reply_generator import EmailReplyGenerator
 from .decision_engine import DecisionEngine
+from .extractor import TaskExtractor
 
 
 class SummarizeEmailAPIView(APIView):
@@ -165,6 +166,11 @@ class AnalyzeEmailAPIView(APIView):
             email_metadata,
             email["body"],
         )
+        
+        tasks = TaskExtractor().extract(
+            email_metadata,
+            email["body"],
+        )
 
         return Response(
             {
@@ -174,5 +180,43 @@ class AnalyzeEmailAPIView(APIView):
                 "summary": summary,
                 "reply": reply,
                 "decision": decision,
+                "tasks": tasks,
+            }
+        )
+    
+class ExtractTasksAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = MessageIDSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        message_id = serializer.validated_data["message_id"]
+
+        gmail = get_gmail_service(request)
+
+        email = gmail.read_email(message_id)
+
+        email_metadata = get_email_metadata(
+            request.user,
+            message_id,
+        )
+
+        tasks = TaskExtractor().extract(
+            email_metadata,
+            email["body"],
+        )
+
+        return Response(
+            {
+                "message_id": message_id,
+                "tasks": tasks,
             }
         )
