@@ -19,6 +19,7 @@ class CalendarService(BaseGoogleService):
     - Create events
     - Fetch events
     - Delete events
+    - List events in a range (conflict detection)
     """
 
     def __init__(self, user):
@@ -43,15 +44,6 @@ class CalendarService(BaseGoogleService):
         attendees=None,
         reminder_minutes_before=None,
     ):
-        """
-        Create a Google Calendar event.
-
-        reminder_minutes_before: if set, overrides Calendar's default
-        reminders with a single popup notification that many minutes
-        before the event starts (e.g. 30). If None, Calendar's normal
-        default reminders apply.
-        """
-
         attendees = attendees or []
 
         event = {
@@ -102,13 +94,38 @@ class CalendarService(BaseGoogleService):
             raise APIException(str(error))
 
     # -------------------------
+    # LIST EVENTS IN RANGE (for conflict detection)
+    # -------------------------
+    def list_events_in_range(self, time_min, time_max):
+        """
+        Return all events on the primary calendar that overlap the
+        given [time_min, time_max) window. Used for conflict
+        detection before scheduling a new reminder.
+        """
+
+        try:
+            result = (
+                self.service.events()
+                .list(
+                    calendarId="primary",
+                    timeMin=time_min.isoformat(),
+                    timeMax=time_max.isoformat(),
+                    singleEvents=True,
+                    orderBy="startTime",
+                )
+                .execute()
+            )
+
+            return result.get("items", [])
+
+        except HttpError as error:
+            logger.exception("Failed to list calendar events for conflict check.")
+            raise APIException(str(error))
+
+    # -------------------------
     # GET EVENT
     # -------------------------
     def get_event(self, event_id):
-        """
-        Retrieve a calendar event by ID.
-        """
-
         try:
             return (
                 self.service.events()
@@ -127,10 +144,6 @@ class CalendarService(BaseGoogleService):
     # DELETE EVENT
     # -------------------------
     def delete_event(self, event_id):
-        """
-        Delete a calendar event.
-        """
-
         try:
             self.service.events().delete(
                 calendarId="primary",

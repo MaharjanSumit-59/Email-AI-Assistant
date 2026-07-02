@@ -1,12 +1,17 @@
 import logging
 
-from rest_framework import generics
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone as dj_timezone
+
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Reminder
 from .serializers import ReminderSerializer
 from .calendar_service import CalendarService
-from .services import ReminderService
+from .services import ReminderService, EVENT_DURATION_MINUTES
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +26,48 @@ class ReminderListCreateView(generics.ListCreateAPIView):
             user=self.request.user
         ).order_by("-scheduled_time")
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        override_conflict = bool(request.data.get("override_conflict", False))
+
+        # Check conflicts BEFORE saving anything — a hard block means
+        # nothing gets written to the DB or Calendar if we're going
+        # to refuse it anyway.
+        probe = Reminder(
+            user=request.user,
+            scheduled_time=serializer.validated_data["scheduled_time"],
+        )
+        conflicts = ReminderService.check_conflicts(probe)
+
+        if conflicts and not override_conflict:
+            return Response(
+                {
+                    "detail": (
+                        "This time conflicts with an existing calendar "
+                        "event. Pass \"override_conflict\": true to "
+                        "schedule it anyway."
+                    ),
+                    "has_conflict": True,
+                    "conflicts": conflicts,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
         reminder = serializer.save(user=self.request.user)
         ReminderService.create_calendar_event(reminder)
+
+        data = serializer.data
+        data["has_conflict"] = len(conflicts) > 0
+        data["conflicts"] = conflicts
+
+        headers = self.get_success_headers(data)
+        return Response(
+            data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
 
 
 class ReminderDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -43,8 +87,6 @@ class ReminderDetailView(generics.RetrieveUpdateDestroyAPIView):
                     instance.calendar_event_id
                 )
             except Exception:
-                # Don't block reminder deletion if the calendar
-                # event is already gone or Google is unreachable.
                 logger.exception(
                     "Failed to delete calendar event %s for reminder %s",
                     instance.calendar_event_id,
@@ -52,3 +94,64 @@ class ReminderDetailView(generics.RetrieveUpdateDestroyAPIView):
                 )
 
         instance.delete()
+
+
+class CheckConflictsView(APIView):
+    """
+    Pre-flight conflict check — lets a future UI ask "is this time
+    free?" before the user commits to creating a reminder.
+
+    GET /api/reminders/check-conflicts/?scheduled_time=<ISO8601>&duration_minutes=30
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        raw_time = request.query_params.get("scheduled_time")
+
+        if not raw_time:
+            return Response(
+                {"detail": "scheduled_time query parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        scheduled_time = parse_datetime(raw_time)
+
+        if scheduled_time is None:
+            return Response(
+                {"detail": "scheduled_time must be a valid ISO 8601 datetime."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if dj_timezone.is_naive(scheduled_time):
+            scheduled_time = dj_timezone.make_aware(
+                scheduled_time, dj_timezone.get_default_timezone()
+            )
+
+        try:
+            duration_minutes = int(
+                request.query_params.get(
+                    "duration_minutes", EVENT_DURATION_MINUTES
+                )
+            )
+        except ValueError:
+            return Response(
+                {"detail": "duration_minutes must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        probe = Reminder(
+            user=request.user,
+            scheduled_time=scheduled_time,
+        )
+
+        conflicts = ReminderService.check_conflicts(
+            probe, duration_minutes=duration_minutes
+        )
+
+        return Response({
+            "scheduled_time": scheduled_time,
+            "duration_minutes": duration_minutes,
+            "has_conflict": len(conflicts) > 0,
+            "conflicts": conflicts,
+        })

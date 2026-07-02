@@ -8,12 +8,7 @@ from apps.emails.services.gmail_service import GmailService
 
 logger = logging.getLogger(__name__)
 
-# Calendar event length. Reminders don't have a natural "duration" —
-# we just need something visible on the calendar rather than a
-# zero-length sliver, and 30 minutes is a sane default block.
 EVENT_DURATION_MINUTES = 30
-
-# How far in advance Google Calendar should notify the user.
 REMINDER_LEAD_MINUTES = 30
 
 
@@ -23,11 +18,6 @@ class ReminderService:
     def process_due_reminder(reminder: Reminder):
         """
         Executes what happens when a reminder becomes due.
-
-        - SCHEDULE_EMAIL: actually sends the drafted email via Gmail.
-        - REMIND_ME: no email is sent. The user is notified purely
-          via the Calendar popup reminder that was already attached
-          when the reminder was created.
         """
 
         if reminder.reminder_type == Reminder.ReminderType.SCHEDULE_EMAIL:
@@ -53,11 +43,7 @@ class ReminderService:
     def create_calendar_event(reminder: Reminder):
         """
         Create the Google Calendar event for a reminder at the time
-        it's scheduled (not when it's sent/triggered).
-
-        Failure here should not block reminder creation. There's a
-        fallback in the Celery task that retries this at trigger
-        time if calendar_event_id is still empty.
+        it's scheduled.
         """
 
         from .calendar_service import CalendarService
@@ -82,16 +68,56 @@ class ReminderService:
 
         except Exception:
             import traceback
-            print(
-                f"Failed to create calendar event for reminder "
-                f"{reminder.id}:"
-            )
+            print(f"Failed to create calendar event for reminder {reminder.id}:")
             traceback.print_exc()
             logger.exception(
                 "Failed to create calendar event at scheduling time "
                 "for reminder %s",
                 reminder.id,
             )
+
+    @staticmethod
+    def check_conflicts(reminder: Reminder, duration_minutes=EVENT_DURATION_MINUTES):
+        """
+        Check the user's Google Calendar for any existing events that
+        overlap this reminder's proposed time window. Returns a list
+        of conflict dicts (empty list if none, or if the check itself
+        fails).
+        """
+
+        from .calendar_service import CalendarService
+
+        end_time = reminder.scheduled_time + timedelta(minutes=duration_minutes)
+
+        try:
+            calendar = CalendarService(reminder.user)
+            events = calendar.list_events_in_range(
+                reminder.scheduled_time,
+                end_time,
+            )
+
+            conflicts = []
+            for event in events:
+                if event.get("id") == reminder.calendar_event_id:
+                    continue
+
+                start = event.get("start", {})
+                end = event.get("end", {})
+
+                conflicts.append({
+                    "event_id": event.get("id"),
+                    "title": event.get("summary") or "(no title)",
+                    "start": start.get("dateTime") or start.get("date"),
+                    "end": end.get("dateTime") or end.get("date"),
+                })
+
+            return conflicts
+
+        except Exception:
+            import traceback
+            print(f"Conflict check failed for reminder {reminder.id}:")
+            traceback.print_exc()
+            return []
 
     @staticmethod
     def mark_as_failed(reminder: Reminder):
