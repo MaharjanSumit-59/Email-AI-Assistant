@@ -29,16 +29,32 @@ function extractName(header) {
     return header;
 }
 
+const PRIORITY_BAR = {
+    High: "bg-ember",
+    Medium: "bg-signal",
+    Low: "bg-sage",
+};
+
+const PRIORITY_BADGE = {
+    High: "bg-ember-dim text-ember",
+    Medium: "bg-signal-dim text-signal",
+    Low: "bg-sage-dim text-sage",
+};
+
 export default function EmailDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Carried over from the Inbox row so we can paint the priority bar and
+    // category chip instantly, before the full email has loaded.
+    const preview = location.state?.preview;
+
     const [email, setEmail] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const [starred, setStarred] = useState(false);
+    const [starred, setStarred] = useState(Boolean(preview?.starred));
     const [busy, setBusy] = useState(false);
 
     const incomingDraft = location.state?.draftReply || "";
@@ -137,35 +153,55 @@ export default function EmailDetails() {
         }
     };
 
+    const barClass = PRIORITY_BAR[preview?.priority] || "bg-line";
+    const badgeClass =
+        PRIORITY_BADGE[preview?.priority] || "bg-paper text-muted";
+
     return (
         <DashboardLayout>
             <Link
                 to="/inbox"
-                className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6"
+                className="inline-flex items-center gap-2 text-sm text-muted hover:text-ink mb-6"
             >
                 <FiArrowLeft />
                 Back to inbox
             </Link>
 
             {loading && (
-                <div className="bg-white border rounded-xl p-10 text-center text-gray-500">
+                <div className="bg-paper-raised border border-line rounded-xl p-10 text-center text-muted text-sm">
                     Loading email...
                 </div>
             )}
 
             {!loading && error && (
-                <div className="bg-white border rounded-xl p-10 text-center text-red-500">
+                <div className="bg-paper-raised border border-line rounded-xl p-10 text-center text-ember text-sm">
                     {error}
                 </div>
             )}
 
             {!loading && !error && email && (
-                <div className="bg-white border rounded-xl overflow-hidden">
-                    <div className="p-6 border-b">
+                <div className="relative bg-paper-raised border border-line rounded-xl overflow-hidden">
+                    <span
+                        className={`absolute left-0 top-0 bottom-0 w-1 ${barClass}`}
+                    />
+
+                    <div className="p-7 pl-8 border-b border-line">
                         <div className="flex items-start justify-between gap-4">
-                            <h1 className="text-2xl font-bold">
-                                {email.subject || "(no subject)"}
-                            </h1>
+                            <div>
+                                {preview?.priority && (
+                                    <span
+                                        className={`inline-block text-xs font-medium px-2 py-0.5 rounded mb-3 ${badgeClass}`}
+                                    >
+                                        {preview.priority} priority
+                                        {preview.category
+                                            ? ` · ${preview.category}`
+                                            : ""}
+                                    </span>
+                                )}
+                                <h1 className="font-display text-2xl leading-snug">
+                                    {email.subject || "(no subject)"}
+                                </h1>
+                            </div>
 
                             <div className="flex items-center gap-3 shrink-0">
                                 <button
@@ -178,16 +214,12 @@ export default function EmailDetails() {
                                 >
                                     <FiStar
                                         className={
-                                            starred
-                                                ? "hidden"
-                                                : "text-gray-300"
+                                            starred ? "hidden" : "text-faint"
                                         }
                                     />
                                     <FaStar
                                         className={
-                                            starred
-                                                ? "text-yellow-400"
-                                                : "hidden"
+                                            starred ? "text-ember" : "hidden"
                                         }
                                     />
                                 </button>
@@ -196,40 +228,46 @@ export default function EmailDetails() {
                                     onClick={handleDelete}
                                     disabled={busy}
                                     aria-label="Delete email"
-                                    className="text-gray-400 hover:text-red-500"
+                                    className="text-faint hover:text-ember"
                                 >
                                     <FiTrash2 size={18} />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="mt-3 text-sm text-gray-500">
+                        <div className="mt-4 text-sm text-muted space-y-0.5">
                             <p>
-                                <span className="font-medium text-gray-700">
+                                <span className="font-medium text-ink">
                                     {extractName(email.from)}
                                 </span>{" "}
                                 &lt;{extractEmailAddress(email.from)}&gt;
                             </p>
                             <p>To: {email.to}</p>
-                            <p>{email.date}</p>
+                            <p className="font-mono text-xs">{email.date}</p>
                         </div>
                     </div>
 
-                    <div className="p-6 whitespace-pre-wrap leading-relaxed text-gray-800">
+                    <div className="p-7 pl-8 whitespace-pre-wrap leading-relaxed text-ink">
                         {email.body || email.snippet || "(no content)"}
                     </div>
 
-                    <div className="p-6 border-t bg-gray-50">
+                    <div className="p-7 pl-8 border-t border-line bg-paper">
                         {!showReply ? (
                             <button
                                 onClick={() => setShowReply(true)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium"
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-signal text-white hover:bg-ink text-sm font-medium transition-colors"
                             >
                                 <FiCornerUpLeft />
                                 Reply
                             </button>
                         ) : (
                             <form onSubmit={handleSendReply}>
+                                {incomingDraft && (
+                                    <p className="text-xs text-signal font-medium mb-2">
+                                        Drafted by the AI Assistant — review
+                                        before sending.
+                                    </p>
+                                )}
                                 <textarea
                                     value={replyBody}
                                     onChange={(e) =>
@@ -240,7 +278,7 @@ export default function EmailDetails() {
                                     placeholder={`Reply to ${extractName(
                                         email.from
                                     )}...`}
-                                    className="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    className="w-full border border-line bg-paper-raised rounded-lg p-3 outline-none focus:border-signal resize-none text-sm"
                                 />
 
                                 <div className="mt-3 flex items-center gap-3">
@@ -249,7 +287,7 @@ export default function EmailDetails() {
                                         disabled={
                                             sendingReply || !replyBody.trim()
                                         }
-                                        className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                                        className="px-4 py-2 rounded-lg bg-signal text-white hover:bg-ink text-sm font-medium disabled:opacity-40 transition-colors"
                                     >
                                         {sendingReply
                                             ? "Sending..."
@@ -262,7 +300,7 @@ export default function EmailDetails() {
                                             setShowReply(false);
                                             setReplyBody("");
                                         }}
-                                        className="px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-100"
+                                        className="px-4 py-2 rounded-lg border border-line text-sm font-medium hover:bg-paper-raised transition-colors"
                                     >
                                         Cancel
                                     </button>

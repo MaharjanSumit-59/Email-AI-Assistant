@@ -91,6 +91,51 @@ class GmailService(BaseGoogleService):
             logger.exception("Failed to fetch message metadata.")
             raise APIException(str(error))
 
+    def get_messages_metadata_batch(self, message_ids):
+        """
+        Fetches metadata for many messages in a single HTTP round trip
+        instead of one request per message. Gmail's API otherwise forces
+        a separate call per message id, which is what was making the
+        inbox take 5-6 seconds to load for ~25 messages.
+        """
+        if not message_ids:
+            return {}
+
+        results = {}
+        errors = []
+
+        def _callback(request_id, response, exception):
+            if exception is not None:
+                errors.append((request_id, exception))
+            else:
+                results[request_id] = response
+
+        batch = self.service.new_batch_http_request(callback=_callback)
+
+        for message_id in message_ids:
+            batch.add(
+                self.service.users().messages().get(
+                    userId=USER_ID,
+                    id=message_id,
+                    format="metadata",
+                    metadataHeaders=["Subject", "From", "To", "Date"],
+                ),
+                request_id=message_id,
+            )
+
+        try:
+            batch.execute()
+        except HttpError as error:
+            logger.exception("Failed to batch-fetch message metadata.")
+            raise APIException(str(error))
+
+        if errors:
+            logger.warning(
+                "Some messages failed to fetch in batch: %s", errors
+            )
+
+        return results
+
     # -------------------------
     # READ EMAIL
     # -------------------------

@@ -177,6 +177,14 @@ class AIAnalysisService:
 
         analysis.save()
 
+        # Keep EmailMetadata's own category/priority fields in sync so
+        # list views (inbox) can show them without joining to AIAnalysis.
+        email.category = decision["category"]
+
+        email.priority = decision["priority"]
+
+        email.save(update_fields=["category", "priority"])
+
         return analysis
 
     @staticmethod

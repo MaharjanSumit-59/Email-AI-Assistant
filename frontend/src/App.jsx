@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Login from "./pages/auth/Login";
+import Landing from "./pages/auth/Landing";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Inbox from "./pages/emails/Inbox";
 import EmailDetails from "./pages/emails/EmailDetails";
@@ -15,7 +15,7 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Login />} />
+                <Route path="/" element={<Landing />} />
 
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 

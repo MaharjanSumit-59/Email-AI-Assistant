@@ -23,15 +23,22 @@ class InboxAPIView(APIView):
         gmail = get_gmail_service(request)
         
 
-        messages = gmail.fetch_inbox(max_results=20)
+        messages = gmail.fetch_inbox(max_results=25)
+
+        message_ids = [message["id"] for message in messages]
+
+        metadata_by_id = gmail.get_messages_metadata_batch(message_ids)
 
         saved_emails = []
 
         for message in messages:
 
-            metadata = gmail.get_message_metadata(
-                message["id"]
-            )
+            metadata = metadata_by_id.get(message["id"])
+
+            if metadata is None:
+                # This one message failed in the batch — skip it rather
+                # than failing the whole inbox load.
+                continue
 
             headers = parse_headers(
                 metadata["payload"]["headers"]
@@ -182,13 +189,18 @@ class SearchEmailAPIView(APIView):
 
         messages = gmail.search_emails(query)
 
+        message_ids = [message["id"] for message in messages]
+
+        metadata_by_id = gmail.get_messages_metadata_batch(message_ids)
+
         emails = []
 
         for message in messages:
 
-            metadata = gmail.get_message_metadata(
-                message["id"]
-            )
+            metadata = metadata_by_id.get(message["id"])
+
+            if metadata is None:
+                continue
 
             headers = parse_headers(
                 metadata["payload"]["headers"]

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -54,17 +54,32 @@ function formatSender(sender) {
     return sender;
 }
 
+// Don't let "Refresh" hit the server more than once per this window.
+const REFRESH_COOLDOWN_MS = 20000;
+
+const PRIORITY_BAR = {
+    High: "bg-ember",
+    Medium: "bg-signal",
+    Low: "bg-sage",
+};
+
 export default function Inbox() {
     const navigate = useNavigate();
 
     const [emails, setEmails] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [cooldownActive, setCooldownActive] = useState(false);
     const [error, setError] = useState(null);
     const [query, setQuery] = useState("");
     const [busyIds, setBusyIds] = useState(new Set());
 
-    const loadInbox = async ({ silent = false } = {}) => {
+    // Doesn't trigger re-renders — just remembers what we last saw so a
+    // "refresh" can tell whether anything actually changed.
+    const latestIdRef = useRef(null);
+    const lastRefreshAtRef = useRef(0);
+
+    const loadInbox = async ({ silent = false, isManualRefresh = false } = {}) => {
         if (silent) {
             setRefreshing(true);
         } else {
@@ -75,7 +90,19 @@ export default function Inbox() {
 
         try {
             const data = await getInbox();
-            setEmails(data);
+            const newestId = data[0]?.gmail_message_id ?? null;
+
+            if (isManualRefresh && newestId && newestId === latestIdRef.current) {
+                // Nothing new since last check — leave the list alone so
+                // starred/expanded state etc. isn't disturbed for no reason.
+                toast("You're all caught up — no new mail.");
+            } else {
+                setEmails(data);
+                latestIdRef.current = newestId;
+                if (isManualRefresh) {
+                    toast.success("Inbox updated");
+                }
+            }
         } catch (err) {
             console.error(err);
             setError(
@@ -91,6 +118,24 @@ export default function Inbox() {
     useEffect(() => {
         loadInbox();
     }, []);
+
+    const handleRefreshClick = () => {
+        const now = Date.now();
+
+        // Client-side throttle: don't spam the server if the user mashes
+        // the refresh button — Gmail isn't going to have new mail every
+        // couple seconds anyway.
+        if (now - lastRefreshAtRef.current < REFRESH_COOLDOWN_MS) {
+            toast("Just checked — give it a few seconds.");
+            return;
+        }
+
+        lastRefreshAtRef.current = now;
+        setCooldownActive(true);
+        setTimeout(() => setCooldownActive(false), REFRESH_COOLDOWN_MS);
+
+        loadInbox({ silent: true, isManualRefresh: true });
+    };
 
     const handleSearch = async (e) => {
         e.preventDefault();
@@ -183,13 +228,22 @@ export default function Inbox() {
 
     return (
         <DashboardLayout>
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl font-bold">Inbox</h1>
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="font-display text-3xl">Inbox</h1>
+                    <p className="text-sm text-muted mt-1">
+                        {loading
+                            ? "Checking your mailbox..."
+                            : `${emails.length} message${
+                                  emails.length === 1 ? "" : "s"
+                              }`}
+                    </p>
+                </div>
 
                 <button
-                    onClick={() => loadInbox({ silent: true })}
-                    disabled={refreshing}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+                    onClick={handleRefreshClick}
+                    disabled={refreshing || cooldownActive}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-paper-raised hover:border-signal hover:text-signal text-sm font-medium disabled:opacity-40 transition-colors"
                 >
                     <FiRefreshCw className={refreshing ? "animate-spin" : ""} />
                     Refresh
@@ -197,35 +251,35 @@ export default function Inbox() {
             </div>
 
             <form onSubmit={handleSearch} className="mb-6">
-                <div className="flex items-center gap-3 bg-white border rounded-lg px-4 py-3 max-w-xl">
-                    <FiSearch className="text-gray-400" />
+                <div className="flex items-center gap-3 bg-paper-raised border border-line rounded-lg px-4 py-3 max-w-xl focus-within:border-signal transition-colors">
+                    <FiSearch className="text-faint shrink-0" />
                     <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search emails..."
-                        className="w-full outline-none"
+                        className="w-full outline-none bg-transparent text-sm"
                     />
                 </div>
             </form>
 
-            <div className="bg-white border rounded-xl overflow-hidden">
+            <div className="bg-paper-raised border border-line rounded-xl overflow-hidden">
                 {loading && (
-                    <div className="p-10 text-center text-gray-500">
+                    <div className="p-10 text-center text-muted text-sm">
                         Loading your inbox...
                     </div>
                 )}
 
                 {!loading && error && (
-                    <div className="p-10 text-center text-red-500">
+                    <div className="p-10 text-center text-ember text-sm">
                         {error}
                     </div>
                 )}
 
                 {!loading && !error && emails.length === 0 && (
-                    <div className="p-16 flex flex-col items-center text-gray-400">
-                        <FiInbox size={40} className="mb-3" />
-                        <p className="text-lg font-medium text-gray-600">
+                    <div className="p-16 flex flex-col items-center text-faint">
+                        <FiInbox size={36} className="mb-3" />
+                        <p className="text-base font-medium text-ink">
                             Nothing here
                         </p>
                         <p className="text-sm">
@@ -239,15 +293,25 @@ export default function Inbox() {
                     emails.map((email) => {
                         const id = email.gmail_message_id;
                         const isBusy = busyIds.has(id);
+                        const barClass =
+                            PRIORITY_BAR[email.priority] || "bg-line";
 
                         return (
                             <div
                                 key={id}
-                                onClick={() => navigate(`/email/${id}`)}
-                                className={`flex items-center gap-4 px-5 py-4 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition ${
+                                onClick={() =>
+                                    navigate(`/email/${id}`, {
+                                        state: { preview: email },
+                                    })
+                                }
+                                className={`relative flex items-center gap-4 pl-6 pr-5 py-4 border-b border-line last:border-b-0 cursor-pointer hover:bg-paper transition-colors ${
                                     isBusy ? "opacity-50" : ""
                                 }`}
                             >
+                                <span
+                                    className={`absolute left-0 top-2 bottom-2 w-[3px] rounded-full ${barClass}`}
+                                />
+
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -265,42 +329,42 @@ export default function Inbox() {
                                         className={
                                             email.starred
                                                 ? "hidden"
-                                                : "text-gray-300"
+                                                : "text-faint"
                                         }
                                     />
                                     <FaStar
                                         className={
                                             email.starred
-                                                ? "text-yellow-400"
+                                                ? "text-ember"
                                                 : "hidden"
                                         }
                                     />
                                 </button>
 
-                                <div className="w-48 shrink-0 font-medium truncate">
+                                <div className="w-48 shrink-0 font-medium truncate text-sm">
                                     {formatSender(email.sender)}
                                 </div>
 
                                 <div className="flex-1 min-w-0 flex items-baseline gap-2">
-                                    <span className="font-medium truncate">
+                                    <span className="font-medium truncate text-sm">
                                         {email.subject || "(no subject)"}
                                     </span>
-                                    <span className="text-gray-400 text-sm truncate">
+                                    <span className="text-faint text-sm truncate">
                                         — {email.snippet}
                                     </span>
                                 </div>
 
-                                <div className="text-sm text-gray-400 shrink-0 w-16 text-right">
+                                <div className="font-mono text-xs text-faint shrink-0 w-16 text-right">
                                     {formatDate(email.received_at)}
                                 </div>
 
                                 <button
                                     onClick={(e) => handleDelete(email, e)}
                                     disabled={isBusy}
-                                    className="text-gray-300 hover:text-red-500 shrink-0"
+                                    className="text-faint hover:text-ember shrink-0"
                                     aria-label="Delete email"
                                 >
-                                    <FiTrash2 />
+                                    <FiTrash2 size={16} />
                                 </button>
                             </div>
                         );

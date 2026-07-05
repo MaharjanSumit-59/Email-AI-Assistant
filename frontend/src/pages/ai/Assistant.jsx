@@ -29,16 +29,16 @@ function formatSender(sender) {
     return sender;
 }
 
-const PRIORITY_STYLES = {
-    High: "bg-red-100 text-red-700",
-    Medium: "bg-yellow-100 text-yellow-700",
-    Low: "bg-green-100 text-green-700",
+const PRIORITY_BADGE = {
+    High: "bg-ember-dim text-ember",
+    Medium: "bg-signal-dim text-signal",
+    Low: "bg-sage-dim text-sage",
 };
 
 function ResultCard({ title, icon, children }) {
     return (
-        <div className="bg-white border rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold">
+        <div className="bg-paper-raised border border-line rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3 text-ink font-semibold text-sm">
                 {icon}
                 {title}
             </div>
@@ -160,14 +160,14 @@ export default function Assistant() {
 
     return (
         <DashboardLayout>
-            <h1 className="text-3xl font-bold mb-6">AI Assistant</h1>
+            <h1 className="font-display text-3xl mb-8">Assistant</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Email picker */}
-                <div className="lg:col-span-1 bg-white border rounded-xl overflow-hidden flex flex-col max-h-[75vh]">
-                    <div className="p-4 border-b">
-                        <div className="flex items-center gap-2 bg-gray-50 border rounded-lg px-3 py-2">
-                            <FiSearch className="text-gray-400 shrink-0" />
+                <div className="lg:col-span-1 bg-paper-raised border border-line rounded-xl overflow-hidden flex flex-col max-h-[75vh]">
+                    <div className="p-4 border-b border-line">
+                        <div className="flex items-center gap-2 bg-paper border border-line rounded-lg px-3 py-2 focus-within:border-signal transition-colors">
+                            <FiSearch className="text-faint shrink-0" />
                             <input
                                 type="text"
                                 value={filter}
@@ -180,13 +180,13 @@ export default function Assistant() {
 
                     <div className="overflow-y-auto flex-1">
                         {loadingEmails && (
-                            <div className="p-6 text-center text-gray-400 text-sm">
+                            <div className="p-6 text-center text-muted text-sm">
                                 Loading emails...
                             </div>
                         )}
 
                         {!loadingEmails && emailsError && (
-                            <div className="p-6 text-center text-red-500 text-sm">
+                            <div className="p-6 text-center text-ember text-sm">
                                 {emailsError}
                             </div>
                         )}
@@ -194,7 +194,7 @@ export default function Assistant() {
                         {!loadingEmails &&
                             !emailsError &&
                             filteredEmails.length === 0 && (
-                                <div className="p-6 text-center text-gray-400 text-sm">
+                                <div className="p-6 text-center text-faint text-sm">
                                     No emails match.
                                 </div>
                             )}
@@ -212,16 +212,16 @@ export default function Assistant() {
                                                 email.gmail_message_id
                                             )
                                         }
-                                        className={`w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 transition ${
+                                        className={`w-full text-left px-4 py-3 border-b border-line last:border-b-0 hover:bg-paper transition-colors ${
                                             isSelected
-                                                ? "bg-blue-50 border-l-4 border-l-blue-600"
+                                                ? "bg-signal-dim border-l-[3px] border-l-signal"
                                                 : ""
                                         }`}
                                     >
                                         <p className="font-medium text-sm truncate">
                                             {email.subject || "(no subject)"}
                                         </p>
-                                        <p className="text-xs text-gray-400 truncate">
+                                        <p className="text-xs text-faint truncate">
                                             {formatSender(email.sender)}
                                         </p>
                                     </button>
@@ -233,9 +233,9 @@ export default function Assistant() {
                 {/* Assistant panel */}
                 <div className="lg:col-span-2 space-y-6">
                     {!selectedEmail ? (
-                        <div className="bg-white border rounded-xl p-16 text-center text-gray-400">
-                            <FiZap size={32} className="mx-auto mb-3" />
-                            <p className="text-gray-600 font-medium">
+                        <div className="bg-paper-raised border border-line rounded-xl p-16 text-center text-faint">
+                            <FiZap size={30} className="mx-auto mb-3" />
+                            <p className="text-ink font-medium">
                                 Pick an email to get started
                             </p>
                             <p className="text-sm">
@@ -245,15 +245,15 @@ export default function Assistant() {
                         </div>
                     ) : (
                         <>
-                            <div className="bg-white border rounded-xl p-5">
-                                <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+                            <div className="bg-paper-raised border border-line rounded-xl p-5">
+                                <p className="text-xs font-mono uppercase tracking-wider text-faint mb-1.5">
                                     Selected email
                                 </p>
                                 <p className="font-semibold">
                                     {selectedEmail.subject ||
                                         "(no subject)"}
                                 </p>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-muted">
                                     From{" "}
                                     {formatSender(selectedEmail.sender)}
                                 </p>
@@ -262,7 +262,7 @@ export default function Assistant() {
                                     <button
                                         onClick={() => runAction("summarize")}
                                         disabled={loadingAction !== null}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-sm font-medium hover:border-signal hover:text-signal disabled:opacity-40 transition-colors"
                                     >
                                         <FiFileText />
                                         {loadingAction === "summarize"
@@ -273,7 +273,7 @@ export default function Assistant() {
                                     <button
                                         onClick={() => runAction("reply")}
                                         disabled={loadingAction !== null}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-sm font-medium hover:border-signal hover:text-signal disabled:opacity-40 transition-colors"
                                     >
                                         <FiCornerUpLeft />
                                         {loadingAction === "reply"
@@ -284,7 +284,7 @@ export default function Assistant() {
                                     <button
                                         onClick={() => runAction("tasks")}
                                         disabled={loadingAction !== null}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-sm font-medium hover:border-signal hover:text-signal disabled:opacity-40 transition-colors"
                                     >
                                         <FiCheckSquare />
                                         {loadingAction === "tasks"
@@ -295,7 +295,7 @@ export default function Assistant() {
                                     <button
                                         onClick={() => runAction("analyze")}
                                         disabled={loadingAction !== null}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-ink disabled:opacity-40 transition-colors"
                                     >
                                         <FiZap />
                                         {loadingAction === "analyze"
@@ -306,7 +306,7 @@ export default function Assistant() {
                             </div>
 
                             {!hasResults && loadingAction === null && (
-                                <div className="bg-white border rounded-xl p-10 text-center text-gray-400 text-sm">
+                                <div className="bg-paper-raised border border-line rounded-xl p-10 text-center text-faint text-sm">
                                     Run an action above to see results here.
                                 </div>
                             )}
@@ -319,21 +319,21 @@ export default function Assistant() {
                                     <div className="flex flex-wrap gap-2">
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                                PRIORITY_STYLES[
+                                                PRIORITY_BADGE[
                                                     results.decision.priority
-                                                ] || "bg-gray-100 text-gray-700"
+                                                ] || "bg-paper text-muted"
                                             }`}
                                         >
                                             {results.decision.priority}{" "}
                                             priority
                                         </span>
-                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-paper text-muted">
                                             {results.decision.category}
                                         </span>
-                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-paper text-muted">
                                             {results.decision.importance}
                                         </span>
-                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-paper text-muted font-mono">
                                             {Math.round(
                                                 results.decision.confidence *
                                                     100
@@ -349,7 +349,7 @@ export default function Assistant() {
                                     title="Summary"
                                     icon={<FiFileText />}
                                 >
-                                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                    <p className="text-ink whitespace-pre-wrap leading-relaxed text-sm">
                                         {results.summary}
                                     </p>
                                 </ResultCard>
@@ -360,20 +360,20 @@ export default function Assistant() {
                                     title="Suggested reply"
                                     icon={<FiCornerUpLeft />}
                                 >
-                                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed mb-4">
+                                    <p className="text-ink whitespace-pre-wrap leading-relaxed mb-4 text-sm">
                                         {results.reply}
                                     </p>
                                     <div className="flex gap-3">
                                         <button
                                             onClick={handleUseReply}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-ink transition-colors"
                                         >
                                             Use in reply
                                             <FiArrowRight />
                                         </button>
                                         <button
                                             onClick={handleCopyReply}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50"
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-sm font-medium hover:bg-paper transition-colors"
                                         >
                                             <FiCopy />
                                             Copy
@@ -388,7 +388,7 @@ export default function Assistant() {
                                     icon={<FiCheckSquare />}
                                 >
                                     {results.tasks.length === 0 ? (
-                                        <p className="text-gray-400 text-sm">
+                                        <p className="text-faint text-sm">
                                             No action items found in this
                                             email.
                                         </p>
@@ -400,12 +400,12 @@ export default function Assistant() {
                                                         key={idx}
                                                         className="flex items-start gap-3"
                                                     >
-                                                        <FiCheckSquare className="mt-1 text-gray-300 shrink-0" />
+                                                        <FiCheckSquare className="mt-1 text-faint shrink-0" />
                                                         <div>
-                                                            <p className="text-gray-800">
+                                                            <p className="text-ink text-sm">
                                                                 {task.task}
                                                             </p>
-                                                            <p className="text-xs text-gray-400">
+                                                            <p className="text-xs text-faint font-mono">
                                                                 {task.person
                                                                     ? `${task.person} · `
                                                                     : ""}
