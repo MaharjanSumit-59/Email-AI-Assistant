@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FiArrowLeft, FiStar, FiTrash2, FiCornerUpLeft } from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
@@ -32,6 +32,7 @@ function extractName(header) {
 export default function EmailDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [email, setEmail] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -40,8 +41,9 @@ export default function EmailDetails() {
     const [starred, setStarred] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    const [showReply, setShowReply] = useState(false);
-    const [replyBody, setReplyBody] = useState("");
+    const incomingDraft = location.state?.draftReply || "";
+    const [showReply, setShowReply] = useState(Boolean(incomingDraft));
+    const [replyBody, setReplyBody] = useState(incomingDraft);
     const [sendingReply, setSendingReply] = useState(false);
 
     useEffect(() => {
