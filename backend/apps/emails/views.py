@@ -165,15 +165,15 @@ class SearchEmailAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def post(self, request):
 
-        query = request.query_params.get("q")
+        query = request.data.get("query")
 
         if not query:
 
             return Response(
                 {
-                    "error": "Query parameter 'q' is required."
+                    "error": "'query' is required in the request body."
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -317,7 +317,7 @@ class DeleteEmailAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def delete(self, request):
+    def post(self, request):
 
         serializer = EmailActionSerializer(
             data=request.data

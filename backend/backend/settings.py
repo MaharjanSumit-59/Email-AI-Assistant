@@ -20,6 +20,11 @@ GEMINI_MODEL = os.getenv(
     "gemini-2.5-flash"
 )
 
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -45,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "rest_framework",
+    "corsheaders",
     'apps.users',
     'apps.ai',
     'apps.authentication',

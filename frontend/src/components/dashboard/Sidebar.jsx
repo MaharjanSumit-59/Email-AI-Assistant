@@ -8,6 +8,9 @@ import {
     FiCpu,
 } from "react-icons/fi";
 
+import useAuth from "../../hooks/useAuth";
+
+
 const links = [
     {
         name: "Dashboard",
@@ -42,6 +45,14 @@ const links = [
 ];
 
 export default function Sidebar() {
+    const { logout } = useAuth();
+    const handleLogout = () => {
+
+    logout();
+
+    window.location.href = "/";
+
+};
     return (
         <aside className="w-64 bg-white border-r min-h-screen">
             <div className="p-6 text-2xl font-bold text-blue-600">
@@ -66,6 +77,12 @@ export default function Sidebar() {
                     </NavLink>
                 ))}
             </nav>
+            <button
+            onClick={handleLogout}
+            className="mx-4 mb-6 bg-red-500 text-white rounded-lg py-2 hover:bg-red-600"
+            >
+            Logout
+        </button>
         </aside>
     );
 }

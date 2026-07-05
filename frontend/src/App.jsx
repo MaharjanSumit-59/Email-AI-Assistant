@@ -8,6 +8,8 @@ import Reminders from "./pages/reminders/Reminders";
 import Profile from "./pages/profile/Profile";
 import Settings from "./pages/settings/Settings";
 import Assistant from "./pages/ai/Assistant";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import AuthSuccess from "./pages/auth/AuthSuccess";
 
 function App() {
     return (
@@ -15,18 +17,19 @@ function App() {
             <Routes>
                 <Route path="/" element={<Login />} />
 
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-                <Route path="/inbox" element={<Inbox />} />
+                <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
 
-                <Route path="/email/:id" element={<EmailDetails />} />
+                <Route path="/email/:id" element={<ProtectedRoute><EmailDetails /></ProtectedRoute>} />
 
-                <Route path="/reminders" element={<Reminders />} />
+                <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
 
-                <Route path="/profile" element={<Profile />} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/ai" element={<Assistant />} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/ai" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
+                <Route path="/auth/success" element={<AuthSuccess />}/>
             </Routes>
         </BrowserRouter>
     );

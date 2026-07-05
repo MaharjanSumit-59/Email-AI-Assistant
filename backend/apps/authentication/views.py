@@ -1,5 +1,6 @@
 from django.shortcuts import redirect
 from django.http import JsonResponse
+from django.conf import settings
 
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -48,24 +49,12 @@ class GoogleCallbackView(APIView):
             tokens
         )
 
-        jwt = generate_jwt(user)
+        tokens = generate_jwt(user)
 
-        return JsonResponse({
+        frontend_url = (
+            f"{settings.FRONTEND_URL}/auth/success"
+        )
 
-            "message": "Login Successful",
-
-            "user": {
-
-                "email": user.email,
-
-                "first_name": user.first_name,
-
-                "last_name": user.last_name,
-
-                "profile_picture": user.profile_picture,
-
-            },
-
-            "jwt": jwt
-
-        })
+        return redirect(
+            f"{frontend_url}?token={tokens['access']}&refresh={tokens['refresh']}"
+        )
