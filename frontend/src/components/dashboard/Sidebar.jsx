@@ -6,6 +6,7 @@ import {
     FiUser,
     FiSettings,
     FiCpu,
+    FiActivity,
     FiLogOut,
 } from "react-icons/fi";
 
@@ -14,7 +15,8 @@ import useAuth from "../../hooks/useAuth";
 const links = [
     { name: "Dashboard", path: "/dashboard", icon: <FiHome size={18} /> },
     { name: "Inbox", path: "/inbox", icon: <FiInbox size={18} /> },
-    { name: "Assistant", path: "/ai", icon: <FiCpu size={18} /> },
+    { name: "Assistant", path: "/ai", icon: <FiCpu size={18} />, end: true },
+    { name: "Automation log", path: "/ai/log", icon: <FiActivity size={18} /> },
     { name: "Reminders", path: "/reminders", icon: <FiClock size={18} /> },
     { name: "Profile", path: "/profile", icon: <FiUser size={18} /> },
     { name: "Settings", path: "/settings", icon: <FiSettings size={18} /> },
@@ -41,6 +43,7 @@ export default function Sidebar() {
                     <NavLink
                         key={link.path}
                         to={link.path}
+                        end={link.end}
                         className={({ isActive }) =>
                             `relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                                 isActive

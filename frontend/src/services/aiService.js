@@ -31,3 +31,17 @@ export const extractTasks = async (messageId) => {
 
     return response.data;
 };
+
+export const getActionLogs = async (action) => {
+    const response = await api.get("/ai/logs/", {
+        params: action ? { action } : {},
+    });
+
+    return response.data;
+};
+
+export const runAutomationNow = async () => {
+    const response = await api.post("/ai/run-now/");
+
+    return response.data;
+};

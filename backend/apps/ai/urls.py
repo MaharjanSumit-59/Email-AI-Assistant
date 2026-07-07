@@ -1,6 +1,14 @@
 from django.urls import path
 
-from .views import SummarizeEmailAPIView, GenerateReplyAPIView, TestDecisionAPIView, AnalyzeEmailAPIView, ExtractTasksAPIView
+from .views import (
+    SummarizeEmailAPIView,
+    GenerateReplyAPIView,
+    TestDecisionAPIView,
+    AnalyzeEmailAPIView,
+    ExtractTasksAPIView,
+    EmailActionLogListAPIView,
+    RunAutomationNowAPIView,
+)
 
 urlpatterns = [
     path(
@@ -28,4 +36,14 @@ urlpatterns = [
     "tasks/",
     ExtractTasksAPIView.as_view(),
 ),
+    path(
+        "logs/",
+        EmailActionLogListAPIView.as_view(),
+        name="action-logs",
+    ),
+    path(
+        "run-now/",
+        RunAutomationNowAPIView.as_view(),
+        name="run-automation-now",
+    ),
 ]

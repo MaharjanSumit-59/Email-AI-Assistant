@@ -280,6 +280,50 @@ class GmailService(BaseGoogleService):
             raise APIException(str(error))
 
     # -------------------------
+    # CREATE DRAFT (reply)
+    # -------------------------
+    def create_draft(self, thread_id, to, subject, body):
+        """
+        Creates a Gmail draft reply on the given thread, so it shows up
+        in Gmail's Drafts folder ready for the user to review, edit,
+        and send themselves.
+        """
+        try:
+            message = MIMEText(body)
+            message["to"] = to
+            message["subject"] = subject
+
+            raw = base64.urlsafe_b64encode(
+                message.as_bytes()
+            ).decode()
+
+            draft = (
+                self.service.users()
+                .drafts()
+                .create(
+                    userId=USER_ID,
+                    body={
+                        "message": {
+                            "raw": raw,
+                            "threadId": thread_id,
+                        }
+                    },
+                )
+                .execute()
+            )
+
+            return {
+                "draft_id": draft["id"],
+                "message_id": draft["message"]["id"],
+                "thread_id": draft["message"]["threadId"],
+                "status": "drafted",
+            }
+
+        except HttpError as error:
+            logger.exception("Failed to create draft.")
+            raise APIException(str(error))
+
+    # -------------------------
     # SEARCH EMAILS
     # -------------------------
     def search_emails(self, query, max_results=20):

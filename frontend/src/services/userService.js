@@ -15,6 +15,11 @@ export const getAccountStatus = async () => {
     return response.data;
 };
 
+export const updateProfile = async (data) => {
+    const response = await api.patch("/users/me/", data);
+    return response.data;
+};
+
 export const deleteAccount = async () => {
     const response = await api.delete("/users/delete/");
     return response.data;

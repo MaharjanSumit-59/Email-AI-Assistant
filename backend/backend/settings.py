@@ -199,4 +199,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.reminders.tasks.check_due_reminders",
         "schedule": crontab(minute="*"),
     },
+    "process-new-emails": {
+    "task": "apps.ai.tasks.process_new_emails_for_all_users",
+    "schedule": timedelta(seconds=45),
+    },
 }

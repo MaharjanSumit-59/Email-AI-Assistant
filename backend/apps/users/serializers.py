@@ -14,6 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_name",
             "profile_picture",
             "gmail_connected",
+            "automation_enabled",
             "date_joined",
             "last_login",
         )
@@ -34,4 +35,5 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "last_name",
+            "automation_enabled",
         )

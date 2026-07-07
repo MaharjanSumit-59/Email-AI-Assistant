@@ -8,6 +8,7 @@ import Reminders from "./pages/reminders/Reminders";
 import Profile from "./pages/profile/Profile";
 import Settings from "./pages/settings/Settings";
 import Assistant from "./pages/ai/Assistant";
+import AutomationLog from "./pages/ai/AutomationLog";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AuthSuccess from "./pages/auth/AuthSuccess";
 
@@ -29,6 +30,8 @@ function App() {
 
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/ai" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
+
+                <Route path="/ai/log" element={<ProtectedRoute><AutomationLog /></ProtectedRoute>} />
                 <Route path="/auth/success" element={<AuthSuccess />}/>
             </Routes>
         </BrowserRouter>
