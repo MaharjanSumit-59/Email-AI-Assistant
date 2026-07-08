@@ -31,6 +31,7 @@ def build_google_auth_url():
         "email",
         "profile",
         "https://www.googleapis.com/auth/gmail.modify",
+        # "https://mail.google.com",
         "https://www.googleapis.com/auth/calendar",
     ]
 
