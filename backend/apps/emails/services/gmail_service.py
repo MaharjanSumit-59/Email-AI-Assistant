@@ -397,7 +397,7 @@ class GmailService(BaseGoogleService):
             raise APIException(str(error))
 
     # -------------------------
-    # DELETE EMAIL
+    # DELETE EMAIL (move to Trash)
     # -------------------------
     def delete_email(self, message_id):
         try:
@@ -408,9 +408,64 @@ class GmailService(BaseGoogleService):
 
             return {
                 "message_id": message_id,
-                "status": "deleted"
+                "status": "trashed"
             }
 
         except HttpError as error:
-            logger.exception("Failed to delete email.")
+            logger.exception("Failed to trash email.")
+            raise APIException(str(error))
+
+    # -------------------------
+    # RESTORE EMAIL (out of Trash)
+    # -------------------------
+    def restore_email(self, message_id):
+        try:
+            self.service.users().messages().untrash(
+                userId=USER_ID,
+                id=message_id
+            ).execute()
+
+            return {
+                "message_id": message_id,
+                "status": "restored"
+            }
+
+        except HttpError as error:
+            logger.exception("Failed to restore email from trash.")
+            raise APIException(str(error))
+
+    # -------------------------
+    # PERMANENTLY DELETE EMAIL
+    # -------------------------
+    def permanently_delete_email(self, message_id):
+        """
+        Irreversible. Gmail's messages.delete (as opposed to .trash())
+        removes the message immediately with no way to get it back,
+        so this should only ever be called on messages already in
+        Trash (user-initiated "Delete forever" or the auto-clear job).
+        """
+        try:
+            self.service.users().messages().delete(
+                userId=USER_ID,
+                id=message_id
+            ).execute()
+
+            return {
+                "message_id": message_id,
+                "status": "permanently_deleted"
+            }
+
+        except HttpError as error:
+            # Gmail returns 404 if the message was already gone
+            # (e.g. manually emptied from Gmail itself, or a retry
+            # after a previous call actually succeeded). Treat that
+            # as success so cleanup can proceed instead of getting
+            # stuck retrying something that's already done.
+            if getattr(error, "status_code", None) == 404 or error.resp.status == 404:
+                return {
+                    "message_id": message_id,
+                    "status": "already_deleted"
+                }
+
+            logger.exception("Failed to permanently delete email.")
             raise APIException(str(error))

@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
             "profile_picture",
             "gmail_connected",
             "automation_enabled",
+            "trash_retention_days",
             "date_joined",
             "last_login",
         )
@@ -29,6 +30,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
 
+    trash_retention_days = serializers.IntegerField(
+        min_value=1,
+        max_value=365,
+        required=False,
+    )
+
     class Meta:
         model = User
         fields = (
@@ -36,4 +43,5 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "automation_enabled",
+            "trash_retention_days",
         )

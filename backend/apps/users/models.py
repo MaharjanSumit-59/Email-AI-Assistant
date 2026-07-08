@@ -28,6 +28,13 @@ class User(AbstractUser):
         default=True,
     )
 
+    # how many days a message sits in Trash before the auto-clear job
+    # permanently deletes it. Mirrors Gmail's own 30-day purge by
+    # default, but the user can shorten/extend it from Settings.
+    trash_retention_days = models.PositiveSmallIntegerField(
+        default=30,
+    )
+
     USERNAME_FIELD = "email"
 
     REQUIRED_FIELDS = ["username"]
