@@ -18,12 +18,19 @@ class InboxAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    FOLDER_LABELS = {
+        "inbox": ["INBOX"],
+        "sent": ["SENT"],
+    }
+
     def get(self, request):
 
         gmail = get_gmail_service(request)
-        
 
-        messages = gmail.fetch_inbox(max_results=25)
+        folder = request.query_params.get("folder", "inbox").lower()
+        label_ids = self.FOLDER_LABELS.get(folder, ["INBOX"])
+
+        messages = gmail.fetch_inbox(max_results=25, label_ids=label_ids)
 
         message_ids = [message["id"] for message in messages]
 

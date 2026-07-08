@@ -48,7 +48,10 @@ class EmailAutomationEngine:
         if not force and not getattr(self.user, "automation_enabled", True):
             return
 
-        messages = self.gmail.fetch_inbox(max_results=max_results)
+        messages = self.gmail.fetch_inbox(
+            max_results=max_results,
+            label_ids=["INBOX"],
+        )
 
         for message in messages:
             try:

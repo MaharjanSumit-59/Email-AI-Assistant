@@ -52,14 +52,24 @@ class GmailService(BaseGoogleService):
     # -------------------------
     # INBOX
     # -------------------------
-    def fetch_inbox(self, max_results=20):
+    def fetch_inbox(self, max_results=20, label_ids=None):
+        """
+        Lists messages, scoped by label. Defaults to the INBOX label
+        so this only returns mail the user has *received* — Gmail's
+        messages.list returns every message in the account (sent
+        mail included) if no label filter is given.
+        """
+        if label_ids is None:
+            label_ids = ["INBOX"]
+
         try:
             response = (
                 self.service.users()
                 .messages()
                 .list(
                     userId=USER_ID,
-                    maxResults=max_results
+                    maxResults=max_results,
+                    labelIds=label_ids,
                 )
                 .execute()
             )

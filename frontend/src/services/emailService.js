@@ -1,7 +1,9 @@
 import api from "../api/interceptors";
 
-export const getInbox = async () => {
-    const response = await api.get("/emails/");
+export const getInbox = async (folder = "inbox") => {
+    const response = await api.get("/emails/", {
+        params: { folder },
+    });
     return response.data;
 };
 

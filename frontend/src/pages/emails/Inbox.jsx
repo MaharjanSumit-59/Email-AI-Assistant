@@ -72,6 +72,7 @@ export default function Inbox() {
     const [cooldownActive, setCooldownActive] = useState(false);
     const [error, setError] = useState(null);
     const [query, setQuery] = useState("");
+    const [folder, setFolder] = useState("inbox");
     const [busyIds, setBusyIds] = useState(new Set());
 
     // Doesn't trigger re-renders — just remembers what we last saw so a
@@ -79,7 +80,7 @@ export default function Inbox() {
     const latestIdRef = useRef(null);
     const lastRefreshAtRef = useRef(0);
 
-    const loadInbox = async ({ silent = false, isManualRefresh = false } = {}) => {
+    const loadInbox = async ({ silent = false, isManualRefresh = false, targetFolder = folder } = {}) => {
         if (silent) {
             setRefreshing(true);
         } else {
@@ -89,7 +90,7 @@ export default function Inbox() {
         setError(null);
 
         try {
-            const data = await getInbox();
+            const data = await getInbox(targetFolder);
             const newestId = data[0]?.gmail_message_id ?? null;
 
             if (isManualRefresh && newestId && newestId === latestIdRef.current) {
@@ -118,6 +119,15 @@ export default function Inbox() {
     useEffect(() => {
         loadInbox();
     }, []);
+
+    const handleFolderChange = (nextFolder) => {
+        if (nextFolder === folder) return;
+
+        setFolder(nextFolder);
+        latestIdRef.current = null;
+        setQuery("");
+        loadInbox({ targetFolder: nextFolder });
+    };
 
     const handleRefreshClick = () => {
         const now = Date.now();
@@ -228,9 +238,11 @@ export default function Inbox() {
 
     return (
         <DashboardLayout>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="font-display text-3xl">Inbox</h1>
+                    <h1 className="font-display text-3xl">
+                        {folder === "sent" ? "Sent" : "Inbox"}
+                    </h1>
                     <p className="text-sm text-muted mt-1">
                         {loading
                             ? "Checking your mailbox..."
@@ -250,6 +262,29 @@ export default function Inbox() {
                 </button>
             </div>
 
+            <div className="flex gap-2 mb-6">
+                <button
+                    onClick={() => handleFolderChange("inbox")}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        folder === "inbox"
+                            ? "bg-signal text-white"
+                            : "bg-paper-raised border border-line text-muted hover:text-ink"
+                    }`}
+                >
+                    Received
+                </button>
+                <button
+                    onClick={() => handleFolderChange("sent")}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        folder === "sent"
+                            ? "bg-signal text-white"
+                            : "bg-paper-raised border border-line text-muted hover:text-ink"
+                    }`}
+                >
+                    Sent
+                </button>
+            </div>
+
             <form onSubmit={handleSearch} className="mb-6">
                 <div className="flex items-center gap-3 bg-paper-raised border border-line rounded-lg px-4 py-3 max-w-xl focus-within:border-signal transition-colors">
                     <FiSearch className="text-faint shrink-0" />
@@ -266,7 +301,7 @@ export default function Inbox() {
             <div className="bg-paper-raised border border-line rounded-xl overflow-hidden">
                 {loading && (
                     <div className="p-10 text-center text-muted text-sm">
-                        Loading your inbox...
+                        Loading your {folder === "sent" ? "sent mail" : "inbox"}...
                     </div>
                 )}
 
@@ -283,7 +318,9 @@ export default function Inbox() {
                             Nothing here
                         </p>
                         <p className="text-sm">
-                            New emails will show up as soon as they arrive.
+                            {folder === "sent"
+                                ? "Emails you send will show up here."
+                                : "New emails will show up as soon as they arrive."}
                         </p>
                     </div>
                 )}
@@ -342,7 +379,9 @@ export default function Inbox() {
                                 </button>
 
                                 <div className="w-48 shrink-0 font-medium truncate text-sm">
-                                    {formatSender(email.sender)}
+                                    {folder === "sent"
+                                        ? `To: ${formatSender(email.receiver)}`
+                                        : formatSender(email.sender)}
                                 </div>
 
                                 <div className="flex-1 min-w-0 flex items-baseline gap-2">
