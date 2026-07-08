@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/auth/Landing";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Inbox from "./pages/emails/Inbox";
+import Trash from "./pages/emails/Trash";
 import EmailDetails from "./pages/emails/EmailDetails";
 import Reminders from "./pages/reminders/Reminders";
 import Profile from "./pages/profile/Profile";
@@ -27,6 +28,8 @@ function App() {
                 <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
 
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+                <Route path="/trash" element={<ProtectedRoute><Trash /></ProtectedRoute>} />
 
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="/ai" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
