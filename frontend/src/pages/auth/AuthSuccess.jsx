@@ -26,7 +26,7 @@ export default function AuthSuccess() {
 
             try {
 
-                await login(token);
+                await login(token, refresh);
 
                 navigate("/dashboard");
 

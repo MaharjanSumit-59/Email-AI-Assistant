@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import { getProfile } from "../services/userService";
-import { getToken, removeToken, setToken } from "../utils/storage";
+import { getToken, removeToken, setToken, setRefreshToken } from "../utils/storage";
 
 export const AuthContext = createContext();
 
@@ -10,6 +10,10 @@ export default function AuthProvider({ children }) {
 
     const login = async (token) => {
         setToken(token);
+
+        if (refreshToken) {
+            setRefreshToken(refreshToken);
+        }
 
         try {
             const profile = await getProfile();
