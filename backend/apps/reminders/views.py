@@ -96,6 +96,77 @@ class ReminderDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
 
 
+class ConfirmReminderView(APIView):
+    """
+    Confirms a NEEDS_CONFIRMATION reminder (typically an AI-detected
+    meeting with a vague or low-confidence time), optionally
+    correcting the scheduled_time first, then creates the Google
+    Calendar event.
+
+    POST /api/reminders/<id>/confirm/
+    Body (optional): {"scheduled_time": "<ISO 8601>"}
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, *args, **kwargs):
+        try:
+            reminder = Reminder.objects.get(pk=pk, user=request.user)
+        except Reminder.DoesNotExist:
+            return Response(
+                {"detail": "Reminder not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        scheduled_time = None
+        raw_time = request.data.get("scheduled_time")
+
+        if raw_time:
+            scheduled_time = parse_datetime(raw_time)
+
+            if scheduled_time is None:
+                return Response(
+                    {"detail": "scheduled_time must be a valid ISO 8601 datetime."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if dj_timezone.is_naive(scheduled_time):
+                scheduled_time = dj_timezone.make_aware(
+                    scheduled_time, dj_timezone.get_default_timezone()
+                )
+
+        probe = Reminder(
+            user=request.user,
+            scheduled_time=scheduled_time or reminder.scheduled_time,
+        )
+
+        conflicts = ReminderService.check_conflicts(probe)
+        override_conflict = bool(request.data.get("override_conflict", False))
+
+        if conflicts and not override_conflict:
+            return Response(
+                {
+                    "detail": (
+                        "This time conflicts with an existing calendar "
+                        "event. Pass \"override_conflict\": true to "
+                        "confirm it anyway."
+                    ),
+                    "has_conflict": True,
+                    "conflicts": conflicts,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        reminder = ReminderService.confirm(reminder, scheduled_time=scheduled_time)
+
+        serializer = ReminderSerializer(reminder)
+        data = serializer.data
+        data["has_conflict"] = len(conflicts) > 0
+        data["conflicts"] = conflicts
+
+        return Response(data)
+
+
 class CheckConflictsView(APIView):
     """
     Pre-flight conflict check — lets a future UI ask "is this time

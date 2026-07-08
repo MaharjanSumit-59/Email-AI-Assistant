@@ -8,10 +8,17 @@ from apps.emails.services.gmail_service import GmailService
 
 from .decision_engine import DecisionEngine
 from .reply_generator import EmailReplyGenerator
+from .meeting_extractor import MeetingExtractor
 from .models import EmailActionLog
+
+from apps.reminders.services import ReminderService
 
 
 logger = logging.getLogger(__name__)
+
+# Categories that are extremely unlikely to contain a real meeting -
+# skip the extra Gemini call for these to save time/quota.
+MEETING_SKIP_CATEGORIES = {"Spam", "Promotion", "Shopping"}
 
 
 class EmailAutomationEngine:
@@ -39,6 +46,7 @@ class EmailAutomationEngine:
         self.gmail = GmailService(user)
         self.decision_engine = DecisionEngine()
         self.reply_generator = EmailReplyGenerator()
+        self.meeting_extractor = MeetingExtractor()
 
     # ------------------------------------------------------------
     # ENTRY POINT
@@ -108,6 +116,9 @@ class EmailAutomationEngine:
             decision["action"] == "auto_send"
             and decision["importance"] != "Important"
         )
+
+        if decision.get("category") not in MEETING_SKIP_CATEGORIES:
+            self._detect_meeting(email_metadata, email["body"])
 
         try:
             reply = self.reply_generator.generate(
@@ -183,6 +194,56 @@ class EmailAutomationEngine:
             return
 
         self._mark_processed(email_metadata)
+
+    def _detect_meeting(self, email_metadata, email_body):
+        """
+        Asks Gemini whether this email describes a meeting and, if
+        so, creates a Reminder (with a Google Calendar event, or
+        parked for the user to confirm). Never raises - a failure
+        here should never break the reply/draft pipeline.
+        """
+
+        try:
+            meeting = self.meeting_extractor.extract(
+                email_body,
+                reference_datetime=email_metadata.received_at,
+            )
+
+            if not meeting["has_meeting"]:
+                return
+
+            reminder = ReminderService.create_from_meeting(
+                self.user,
+                email_metadata,
+                meeting,
+            )
+
+            if reminder is None:
+                return
+
+            self._log(
+                email_metadata,
+                action=(
+                    "meeting_scheduled"
+                    if reminder.status == "PENDING"
+                    else "meeting_needs_confirmation"
+                ),
+                reasoning=(
+                    f"Detected a meeting ('{meeting['title']}') and "
+                    + (
+                        "added it straight to your calendar."
+                        if reminder.status == "PENDING"
+                        else "saved it to Reminders for you to confirm "
+                        "the time before it's added to your calendar."
+                    )
+                ),
+            )
+
+        except Exception:
+            logger.exception(
+                "Meeting detection failed for message (user %s)",
+                self.user.id,
+            )
 
     # ------------------------------------------------------------
     # HELPERS

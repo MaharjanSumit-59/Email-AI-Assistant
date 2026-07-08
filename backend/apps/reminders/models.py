@@ -12,6 +12,7 @@ class Reminder(models.Model):
 
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
+        ("NEEDS_CONFIRMATION", "Needs Confirmation"),
         ("SENT", "Sent"),
         ("FAILED", "Failed"),
         ("CANCELLED", "Cancelled"),
@@ -20,6 +21,11 @@ class Reminder(models.Model):
     class ReminderType(models.TextChoices):
         SCHEDULE_EMAIL = "SCHEDULE_EMAIL", "Schedule an Email"
         REMIND_ME = "REMIND_ME", "Remind Me"
+        MEETING = "MEETING", "Meeting"
+
+    class Source(models.TextChoices):
+        MANUAL = "MANUAL", "Manual"
+        AI_DETECTED = "AI_DETECTED", "AI Detected"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -32,13 +38,41 @@ class Reminder(models.Model):
     # REMIND_ME: no email is ever sent — this exists purely as a
     #   personal reminder. subject/body still get used as the title
     #   and description of the Calendar event.
+    # MEETING: same as REMIND_ME (no email sent), but created
+    #   automatically by the AI pipeline after it noticed a meeting
+    #   mentioned in an incoming email.
     reminder_type = models.CharField(
         max_length=20,
         choices=ReminderType.choices,
         default=ReminderType.SCHEDULE_EMAIL,
     )
 
-    recipient = models.EmailField()
+    # Where this reminder came from. AI_DETECTED reminders were
+    # created by the automation pipeline, not typed in by the user.
+    source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        default=Source.MANUAL,
+    )
+
+    # The email this reminder was extracted from, if any. Kept so the
+    # UI can link back to "why was this created".
+    source_email = models.ForeignKey(
+        "emails.EmailMetadata",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ai_reminders",
+    )
+
+    # Gemini's confidence (0-1) that this meeting time is correct.
+    # Only meaningful for AI_DETECTED reminders.
+    ai_confidence = models.FloatField(
+        default=0.0,
+        blank=True,
+    )
+
+    recipient = models.EmailField(blank=True)
 
     subject = models.CharField(max_length=255)
 
