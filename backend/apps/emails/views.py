@@ -591,7 +591,7 @@ class EmptyTrashAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
-        )
+        
 
 
 class ContactSuggestionsAPIView(APIView):
