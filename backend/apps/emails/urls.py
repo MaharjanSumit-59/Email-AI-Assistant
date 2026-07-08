@@ -8,7 +8,8 @@ from .views import (
     SearchEmailAPIView,
     StarEmailAPIView,
     UnstarEmailAPIView,
-    DeleteEmailAPIView
+    DeleteEmailAPIView,
+    ContactSuggestionsAPIView,
 )
 
 urlpatterns = [
@@ -23,6 +24,12 @@ urlpatterns = [
         "search/",
         SearchEmailAPIView.as_view(),
         name="search-email"
+    ),
+
+    path(
+        "contacts/",
+        ContactSuggestionsAPIView.as_view(),
+        name="contact-suggestions"
     ),
 
     path(

@@ -20,6 +20,11 @@ export const searchEmails = async (query) => {
     return response.data;
 };
 
+export const getContactSuggestions = async () => {
+    const response = await api.get("/emails/contacts/");
+    return response.data;
+};
+
 export const sendEmail = async (payload) => {
     const response = await api.post("/emails/send/", payload);
     return response.data;
