@@ -15,6 +15,7 @@ export default function AuthSuccess() {
         const authenticate = async () => {
 
             const token = searchParams.get("token");
+            const refresh = searchParams.get("refresh");
 
             if (!token) {
 
