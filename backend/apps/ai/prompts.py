@@ -167,6 +167,73 @@ Email:
 {email_body}
 """
 
+# ==========================================================
+# MEETING DETECTION
+# ==========================================================
+
+def extract_meeting(email_body: str, reference_date: str, reference_weekday: str) -> str:
+
+    return f"""
+You are an AI assistant that reads an email and decides whether it
+proposes, confirms, or reschedules a meeting / call / appointment
+involving the recipient, and if so, works out when it is.
+
+Today's date is {reference_date} ({reference_weekday}). Resolve any
+relative date the email uses ("tomorrow", "next Tuesday", "in two
+weeks", "this afternoon") against that date, not against your own
+sense of the current date.
+
+Return ONLY valid JSON in this exact format:
+
+{{
+    "has_meeting": false,
+    "title": "",
+    "date": null,
+    "time": null,
+    "duration_minutes": 30,
+    "is_time_explicit": false,
+    "attendees": [],
+    "confidence": 0.0
+}}
+
+Field rules:
+
+- "has_meeting": true only if the email is actually proposing,
+  confirming, or rescheduling a specific meeting/call/appointment
+  the recipient would attend. Plans mentioned only in passing,
+  past meetings, or vague statements like "let's catch up sometime"
+  with no attempt at a date do NOT count - use false for those.
+- "title": a short (under 8 words) descriptive title, e.g. "Call with
+  Priya about Q3 budget". Empty string if has_meeting is false.
+- "date": the resolved calendar date in YYYY-MM-DD format, using the
+  reference date above to resolve relative phrasing. null if no date
+  can reasonably be inferred.
+- "time": 24-hour HH:MM local time if a specific time is stated or
+  strongly implied (e.g. "morning" -> not explicit, skip; "3pm" ->
+  "15:00"). null if no specific time is given.
+- "duration_minutes": best guess at meeting length; default 30 if
+  unstated.
+- "is_time_explicit": true only if BOTH date and time are clearly
+  and specifically stated (not vague like "sometime next week" or
+  "in the afternoon").
+- "attendees": array of email addresses explicitly mentioned in the
+  email body as participants (not the sender/recipient headers,
+  which you don't have). Usually empty - only fill this in if
+  addresses appear in the email text itself.
+- "confidence": 0 to 1, how confident you are that this is really a
+  meeting happening at the date/time you extracted.
+
+Rules:
+
+1. Return ONLY JSON.
+2. No markdown, no explanations.
+3. If has_meeting is false, all other fields should be their default
+   empty/null/false values shown above.
+
+Email:
+
+{email_body}
+"""
 
 # ==========================================================
 # TASK EXTRACTION

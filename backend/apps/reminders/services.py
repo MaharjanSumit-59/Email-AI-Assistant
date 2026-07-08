@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.utils import timezone
 
@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 EVENT_DURATION_MINUTES = 30
 REMINDER_LEAD_MINUTES = 30
+# Below this confidence, or when the email didn't give an explicit
+# date+time, a detected meeting is parked as NEEDS_CONFIRMATION
+# instead of being put straight on the calendar.
+MEETING_AUTO_CONFIRM_THRESHOLD = 0.7
 
 
 class ReminderService:
@@ -129,3 +133,102 @@ class ReminderService:
                 "status",
             ]
         )
+
+    # ------------------------------------------------------------
+    # AI MEETING DETECTION
+    # ------------------------------------------------------------
+    @staticmethod
+    def create_from_meeting(user, email_metadata, meeting):
+        """
+        Turn a validated MeetingExtractor result into a Reminder.
+
+        If Gemini gave us an explicit date + time and is reasonably
+        confident, the reminder goes straight to Google Calendar. If
+        it's vague (no time, or low confidence), it's saved as
+        NEEDS_CONFIRMATION so the user can review/adjust the time in
+        the Reminders page before anything touches their calendar.
+        """
+
+        scheduled_time = ReminderService._resolve_meeting_time(meeting)
+
+        if scheduled_time is None:
+            return None
+
+        # Never silently duplicate: if we already made a reminder
+        # from this exact email, don't make another one.
+        existing = Reminder.objects.filter(
+            source_email=email_metadata,
+            source=Reminder.Source.AI_DETECTED,
+        ).first()
+
+        if existing:
+            return existing
+
+        is_confident = (
+            meeting["is_time_explicit"]
+            and meeting["confidence"] >= MEETING_AUTO_CONFIRM_THRESHOLD
+            and scheduled_time > timezone.now()
+        )
+
+        reminder = Reminder.objects.create(
+            user=user,
+            reminder_type=Reminder.ReminderType.MEETING,
+            source=Reminder.Source.AI_DETECTED,
+            source_email=email_metadata,
+            ai_confidence=meeting["confidence"],
+            recipient=user.email or "",
+            subject=meeting["title"] or (email_metadata.subject or "Meeting"),
+            body=(
+                f"Detected automatically from an email: \"{email_metadata.subject}\"."
+            ),
+            scheduled_time=scheduled_time,
+            status="PENDING" if is_confident else "NEEDS_CONFIRMATION",
+        )
+
+        if is_confident:
+            ReminderService.create_calendar_event(reminder)
+
+        return reminder
+
+    @staticmethod
+    def confirm(reminder: Reminder, scheduled_time=None):
+        """
+        User has reviewed a NEEDS_CONFIRMATION reminder (optionally
+        correcting the time) and wants it on the calendar now.
+        """
+
+        if scheduled_time is not None:
+            reminder.scheduled_time = scheduled_time
+
+        reminder.status = "PENDING"
+        reminder.save(update_fields=["scheduled_time", "status"])
+
+        if not reminder.calendar_event_id:
+            ReminderService.create_calendar_event(reminder)
+
+        return reminder
+
+    @staticmethod
+    def _resolve_meeting_time(meeting):
+        """
+        Combine the extracted date (+ optional time) into an
+        aware datetime. Meetings without a time default to 9:00 AM
+        local time, which also forces is_confident to False upstream
+        via is_time_explicit.
+        """
+
+        date_str = meeting.get("date")
+
+        if not date_str:
+            return None
+
+        time_str = meeting.get("time") or "09:00"
+
+        try:
+            naive = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            return None
+
+        current_tz = timezone.get_current_timezone()
+
+        return timezone.make_aware(naive, current_tz)

@@ -82,6 +82,8 @@ class EmailActionLog(models.Model):
         ("draft_created", "Draft created"),
         ("skipped", "Skipped"),
         ("failed", "Failed"),
+        ("meeting_scheduled", "Meeting scheduled"),
+        ("meeting_needs_confirmation", "Meeting needs confirmation"),
     ]
 
     email = models.ForeignKey(
@@ -91,7 +93,7 @@ class EmailActionLog(models.Model):
     )
 
     action = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=ACTION_CHOICES,
     )
 

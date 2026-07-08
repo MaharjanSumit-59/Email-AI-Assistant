@@ -10,6 +10,9 @@ class ReminderSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "reminder_type",
+            "source",
+            "source_email",
+            "ai_confidence",
             "recipient",
             "subject",
             "body",
@@ -23,6 +26,9 @@ class ReminderSerializer(serializers.ModelSerializer):
 
         read_only_fields = (
             "id",
+            "source",
+            "source_email",
+            "ai_confidence",
             "status",
             "sent_at",
             "calendar_event_id",
