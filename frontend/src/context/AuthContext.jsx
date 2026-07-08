@@ -8,7 +8,7 @@ export default function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const login = async (token) => {
+    const login = async (token, refreshToken) => {
         setToken(token);
 
         if (refreshToken) {
