@@ -18,20 +18,34 @@ class InboxAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    FOLDER_LABELS = {
+        "inbox": ["INBOX"],
+        "sent": ["SENT"],
+    }
+
     def get(self, request):
 
         gmail = get_gmail_service(request)
-        
 
-        messages = gmail.fetch_inbox(max_results=20)
+        folder = request.query_params.get("folder", "inbox").lower()
+        label_ids = self.FOLDER_LABELS.get(folder, ["INBOX"])
+
+        messages = gmail.fetch_inbox(max_results=25, label_ids=label_ids)
+
+        message_ids = [message["id"] for message in messages]
+
+        metadata_by_id = gmail.get_messages_metadata_batch(message_ids)
 
         saved_emails = []
 
         for message in messages:
 
-            metadata = gmail.get_message_metadata(
-                message["id"]
-            )
+            metadata = metadata_by_id.get(message["id"])
+
+            if metadata is None:
+                # This one message failed in the batch — skip it rather
+                # than failing the whole inbox load.
+                continue
 
             headers = parse_headers(
                 metadata["payload"]["headers"]
@@ -165,15 +179,15 @@ class SearchEmailAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def post(self, request):
 
-        query = request.query_params.get("q")
+        query = request.data.get("query")
 
         if not query:
 
             return Response(
                 {
-                    "error": "Query parameter 'q' is required."
+                    "error": "'query' is required in the request body."
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -182,13 +196,18 @@ class SearchEmailAPIView(APIView):
 
         messages = gmail.search_emails(query)
 
+        message_ids = [message["id"] for message in messages]
+
+        metadata_by_id = gmail.get_messages_metadata_batch(message_ids)
+
         emails = []
 
         for message in messages:
 
-            metadata = gmail.get_message_metadata(
-                message["id"]
-            )
+            metadata = metadata_by_id.get(message["id"])
+
+            if metadata is None:
+                continue
 
             headers = parse_headers(
                 metadata["payload"]["headers"]
@@ -317,7 +336,7 @@ class DeleteEmailAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def delete(self, request):
+    def post(self, request):
 
         serializer = EmailActionSerializer(
             data=request.data

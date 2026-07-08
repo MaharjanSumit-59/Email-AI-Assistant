@@ -66,6 +66,12 @@ class EmailMetadata(models.Model):
         auto_now_add=True
     )
 
+    # set once the AI automation pipeline has classified/replied to
+    # this email, so the same message is never processed twice
+    ai_processed = models.BooleanField(
+        default=False
+    )
+
     class Meta:
         ordering = ["-received_at"]
 

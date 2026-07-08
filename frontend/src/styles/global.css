@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+    --color-paper: #f4f5f1;
+    --color-paper-raised: #ffffff;
+    --color-ink: #191b20;
+    --color-muted: #6e7178;
+    --color-faint: #9a9da3;
+    --color-line: #e2e1da;
+
+    --color-signal: #2f5fde;
+    --color-signal-dim: #e8edfc;
+    --color-ember: #e1602c;
+    --color-ember-dim: #fbe7de;
+    --color-sage: #4f7a63;
+    --color-sage-dim: #e4eee8;
+
+    --font-display: "Fraunces", "Georgia", serif;
+    --font-sans: "Inter", -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", "Menlo", monospace;
+}
+
+html,
+body,
+#root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+    background: var(--color-paper);
+    color: var(--color-ink);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+::selection {
+    background: var(--color-signal-dim);
+    color: var(--color-signal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

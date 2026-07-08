@@ -40,7 +40,7 @@ def build_google_auth_url():
         "response_type": "code",
         "scope": " ".join(scopes),
         "access_type": "offline",
-        "prompt": "consent",
+        "prompt": "select_account",
     }
 
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
@@ -112,17 +112,28 @@ def create_or_update_user(user_info):
 def save_google_tokens(user, tokens):
     """
     Save Google OAuth tokens.
+
+    Google only sends back a refresh_token the first time a user
+    consents (or whenever `prompt=consent` is forced). On every other
+    login `tokens` won't include one, so we keep whatever was already
+    stored instead of wiping it out.
     """
 
     expires_at = timezone.now() + timedelta(
         seconds=tokens.get("expires_in", 3600)
     )
 
+    existing = GoogleToken.objects.filter(user=user).first()
+
+    refresh_token = tokens.get("refresh_token") or (
+        existing.refresh_token if existing else None
+    )
+
     GoogleToken.objects.update_or_create(
         user=user,
         defaults={
             "access_token": tokens["access_token"],
-            "refresh_token": tokens.get("refresh_token"),
+            "refresh_token": refresh_token,
             "scope": tokens.get("scope", ""),
             "token_type": tokens.get("token_type", "Bearer"),
             "expires_at": expires_at,

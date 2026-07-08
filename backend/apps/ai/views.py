@@ -7,11 +7,13 @@ from apps.emails.models import EmailMetadata
 from apps.emails.utils import get_gmail_service
 
 from .utils import get_email_metadata
-from .serializers import MessageIDSerializer
+from .serializers import MessageIDSerializer, EmailActionLogSerializer
 from .summarizer import EmailSummarizer
 from .reply_generator import EmailReplyGenerator
 from .decision_engine import DecisionEngine
 from .extractor import TaskExtractor
+from .models import EmailActionLog
+from .automation import EmailAutomationEngine
 
 
 class SummarizeEmailAPIView(APIView):
@@ -220,3 +222,58 @@ class ExtractTasksAPIView(APIView):
                 "tasks": tasks,
             }
         )
+
+
+class EmailActionLogListAPIView(APIView):
+    """
+    Returns the automation audit trail (newest first) for the
+    logged-in user: every email the automation engine looked at, what
+    it decided, and what it did about it (auto-replied / drafted /
+    skipped / failed). Optional ?action=auto_replied|draft_created|
+    skipped|failed to filter down to one bucket.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        logs = EmailActionLog.objects.filter(
+            email__user=request.user
+        ).select_related("email")
+
+        action_filter = request.query_params.get("action")
+
+        if action_filter:
+            logs = logs.filter(action=action_filter)
+
+        limit = int(request.query_params.get("limit", 50))
+        limit = max(1, min(limit, 200))
+
+        serializer = EmailActionLogSerializer(
+            logs[:limit],
+            many=True,
+        )
+
+        return Response(serializer.data)
+
+
+class RunAutomationNowAPIView(APIView):
+    """
+    Lets a user trigger an automation sweep of their own inbox on
+    demand, instead of waiting for the next scheduled run. Runs
+    synchronously so the response reflects what just happened.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        if not request.user.gmail_connected:
+            return Response(
+                {"detail": "Connect Gmail before running automation."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        EmailAutomationEngine(request.user).run(force=True)
+
+        return Response({"status": "completed"})

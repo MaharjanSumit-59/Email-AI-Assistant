@@ -21,6 +21,13 @@ class User(AbstractUser):
         default=False,
     )
 
+    # master switch for the AI automation pipeline (auto-reply / draft
+    # generation). Off by default risk is avoided by defaulting True,
+    # matching the existing migration; user can flip it off in Settings.
+    automation_enabled = models.BooleanField(
+        default=True,
+    )
+
     USERNAME_FIELD = "email"
 
     REQUIRED_FIELDS = ["username"]
