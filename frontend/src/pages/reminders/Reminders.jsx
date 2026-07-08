@@ -11,6 +11,8 @@ import {
     FiAlertTriangle,
     FiCalendar,
     FiUser,
+    FiZap,
+    FiCheck,
 } from "react-icons/fi";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
@@ -19,6 +21,7 @@ import {
     getReminders,
     createReminder,
     deleteReminder,
+    confirmReminder,
 } from "../../services/reminderService";
 
 const TYPES = {
@@ -34,16 +37,27 @@ const TYPES = {
         blurb: "A personal nudge on your calendar — nothing is sent.",
         icon: FiBell,
     },
+    MEETING: {
+        value: "MEETING",
+        label: "Meeting",
+        blurb: "Detected automatically from an email.",
+        icon: FiZap,
+    },
 };
 
 const STATUS_STYLES = {
     PENDING: "bg-signal-dim text-signal",
+    NEEDS_CONFIRMATION: "bg-ember-dim text-ember",
     SENT: "bg-sage-dim text-sage",
     FAILED: "bg-ember-dim text-ember",
     CANCELLED: "bg-line text-muted",
 };
 
-const FILTERS = ["ALL", "PENDING", "SENT", "FAILED", "CANCELLED"];
+const FILTERS = ["ALL", "NEEDS_CONFIRMATION", "PENDING", "SENT", "FAILED", "CANCELLED"];
+
+// MEETING reminders are only ever created by the AI pipeline, so the
+// "New Reminder" modal only offers the two manual types.
+const CREATABLE_TYPES = [TYPES.SCHEDULE_EMAIL, TYPES.REMIND_ME];
 
 function toDatetimeLocal(date) {
     const pad = (n) => String(n).padStart(2, "0");
@@ -200,6 +214,31 @@ export default function Reminders() {
         }
     }
 
+    async function handleConfirmMeeting(reminder) {
+        const prev = reminders;
+
+        try {
+            const updated = await confirmReminder(reminder.id);
+            setReminders((list) =>
+                list.map((r) => (r.id === reminder.id ? updated : r))
+            );
+            toast.success("Added to your calendar.");
+        } catch (err) {
+            const data = err?.response?.data;
+
+            if (err?.response?.status === 409 && data?.has_conflict) {
+                toast.error(
+                    "That time conflicts with something on your calendar. " +
+                        "Edit the time first, or delete and recreate it."
+                );
+            } else {
+                console.error(err);
+                setReminders(prev);
+                toast.error(data?.detail || "Couldn't confirm that meeting.");
+            }
+        }
+    }
+
     async function handleDelete(id) {
         if (confirmDeleteId !== id) {
             setConfirmDeleteId(id);
@@ -259,7 +298,11 @@ export default function Reminders() {
                                 : "border-line text-muted hover:text-ink hover:border-ink"
                         )}
                     >
-                        {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
+                        {f === "ALL"
+                            ? "All"
+                            : f === "NEEDS_CONFIRMATION"
+                            ? "Needs Confirmation"
+                            : f.charAt(0) + f.slice(1).toLowerCase()}
                     </button>
                 ))}
             </div>
@@ -308,6 +351,8 @@ export default function Reminders() {
                                         "flex items-center justify-center w-10 h-10 rounded-lg shrink-0",
                                         reminder.reminder_type === "SCHEDULE_EMAIL"
                                             ? "bg-signal-dim text-signal"
+                                            : reminder.reminder_type === "MEETING"
+                                            ? "bg-ember-dim text-ember"
                                             : "bg-sage-dim text-sage"
                                     )}
                                 >
@@ -319,13 +364,21 @@ export default function Reminders() {
                                         <p className="text-sm font-semibold text-ink truncate">
                                             {reminder.subject}
                                         </p>
+                                        {reminder.source === "AI_DETECTED" && (
+                                            <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-signal-dim text-signal">
+                                                <FiZap size={11} />
+                                                AI detected
+                                            </span>
+                                        )}
                                         <span
                                             className={clsx(
                                                 "text-[11px] font-medium px-2 py-0.5 rounded-full",
                                                 STATUS_STYLES[reminder.status]
                                             )}
                                         >
-                                            {reminder.status}
+                                            {reminder.status === "NEEDS_CONFIRMATION"
+                                                ? "Needs confirmation"
+                                                : reminder.status}
                                         </span>
                                     </div>
 
@@ -354,6 +407,16 @@ export default function Reminders() {
                                         </span>
                                     </div>
                                 </div>
+
+                                {reminder.status === "NEEDS_CONFIRMATION" && (
+                                    <button
+                                        onClick={() => handleConfirmMeeting(reminder)}
+                                        className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md shrink-0 bg-sage text-white hover:opacity-90 transition-opacity"
+                                    >
+                                        <FiCheck size={13} />
+                                        Confirm
+                                    </button>
+                                )}
 
                                 <button
                                     onClick={() => handleDelete(reminder.id)}
@@ -397,7 +460,7 @@ export default function Reminders() {
                         <div className="p-6 space-y-5">
                             {/* Type toggle */}
                             <div className="grid grid-cols-2 gap-2 bg-paper p-1 rounded-lg">
-                                {Object.values(TYPES).map((t) => {
+                                {CREATABLE_TYPES.map((t) => {
                                     const TIcon = t.icon;
                                     const active = form.reminder_type === t.value;
                                     return (

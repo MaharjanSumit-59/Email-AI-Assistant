@@ -32,6 +32,10 @@ export default function Settings() {
     const [saving, setSaving] = useState(false);
     const [automationEnabled, setAutomationEnabled] = useState(true);
     const [gmailConnected, setGmailConnected] = useState(false);
+    const [trashRetentionDays, setTrashRetentionDays] = useState(30);
+    const [savingRetention, setSavingRetention] = useState(false);
+
+    const RETENTION_OPTIONS = [7, 15, 30, 60, 90];
 
     useEffect(() => {
         const load = async () => {
@@ -39,6 +43,7 @@ export default function Settings() {
                 const profile = await getProfile();
                 setAutomationEnabled(Boolean(profile.automation_enabled));
                 setGmailConnected(Boolean(profile.gmail_connected));
+                setTrashRetentionDays(profile.trash_retention_days ?? 30);
             } catch (err) {
                 console.error(err);
                 toast.error("Couldn't load your settings.");
@@ -65,6 +70,23 @@ export default function Settings() {
             toast.error("Couldn't save that. Try again.");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleRetentionChange = async (days) => {
+        const previous = trashRetentionDays;
+        setTrashRetentionDays(days);
+        setSavingRetention(true);
+
+        try {
+            await updateProfile({ trash_retention_days: days });
+            toast.success(`Trash now auto-clears after ${days} days`);
+        } catch (err) {
+            console.error(err);
+            setTrashRetentionDays(previous);
+            toast.error("Couldn't save that. Try again.");
+        } finally {
+            setSavingRetention(false);
         }
     };
 
@@ -112,6 +134,52 @@ export default function Settings() {
                             Gmail isn't connected yet, so automation has
                             nothing to work on until you connect it.
                         </p>
+                    )}
+                </div>
+
+                <div className="bg-paper-raised border border-line rounded-xl p-6">
+                    <h2 className="font-semibold text-ink mb-1">
+                        Trash auto-clear
+                    </h2>
+                    <p className="text-sm text-muted mb-5">
+                        Deleted emails sit in Trash for a grace period
+                        before they're permanently removed, in case you
+                        change your mind. Choose how long that grace
+                        period lasts.
+                    </p>
+
+                    {loading ? (
+                        <p className="text-sm text-faint">Loading...</p>
+                    ) : (
+                        <div className="flex items-center justify-between py-3 border-t border-line">
+                            <div>
+                                <p className="text-sm font-medium text-ink">
+                                    Delete emails from Trash after
+                                </p>
+                                <p className="text-xs text-faint mt-0.5">
+                                    Currently set to{" "}
+                                    {trashRetentionDays} day
+                                    {trashRetentionDays === 1 ? "" : "s"}.
+                                </p>
+                            </div>
+
+                            <select
+                                value={trashRetentionDays}
+                                disabled={savingRetention}
+                                onChange={(e) =>
+                                    handleRetentionChange(
+                                        Number(e.target.value)
+                                    )
+                                }
+                                className="px-3 py-2 rounded-lg border border-line bg-paper text-sm font-medium disabled:opacity-40"
+                            >
+                                {RETENTION_OPTIONS.map((days) => (
+                                    <option key={days} value={days}>
+                                        {days} days
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     )}
                 </div>
 

@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
     FiHome,
     FiInbox,
+    FiTrash2,
     FiClock,
     FiUser,
     FiSettings,
@@ -19,6 +20,7 @@ const links = [
     { name: "Automation log", path: "/ai/log", icon: <FiActivity size={18} /> },
     { name: "Reminders", path: "/reminders", icon: <FiClock size={18} /> },
     { name: "Profile", path: "/profile", icon: <FiUser size={18} /> },
+    { name: "Trash", path: "/trash", icon: <FiTrash2 size={18} /> },
     { name: "Settings", path: "/settings", icon: <FiSettings size={18} /> },
 ];
 

@@ -34,3 +34,8 @@ export const checkConflicts = async (scheduledTime, durationMinutes = 30) => {
     });
     return response.data;
 };
+
+export const confirmReminder = async (id, payload = {}) => {
+    const response = await api.post(`/reminders/${id}/confirm/`, payload);
+    return response.data;
+};

@@ -58,3 +58,29 @@ export const deleteEmail = async (messageId) => {
 
     return response.data;
 };
+
+export const getTrash = async () => {
+    const response = await api.get("/emails/trash/");
+    return response.data;
+};
+
+export const restoreEmail = async (messageId) => {
+    const response = await api.post("/emails/restore/", {
+        message_id: messageId,
+    });
+
+    return response.data;
+};
+
+export const permanentlyDeleteEmail = async (messageId) => {
+    const response = await api.post("/emails/permanent-delete/", {
+        message_id: messageId,
+    });
+
+    return response.data;
+};
+
+export const emptyTrash = async () => {
+    const response = await api.post("/emails/trash/empty/");
+    return response.data;
+};
