@@ -1,3 +1,5 @@
+from email.utils import getaddresses
+
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -589,3 +591,58 @@ class EmptyTrashAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+        )
+
+
+class ContactSuggestionsAPIView(APIView):
+    """
+    Returns email addresses this user has previously exchanged mail
+    with (from the locally cached EmailMetadata rows — both people who
+    sent them mail and people they've sent mail to), for autocomplete
+    in the Compose "To" field.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        pairs = EmailMetadata.objects.filter(
+            user=request.user
+        ).values_list("sender", "receiver")
+
+        raw_headers = []
+
+        for sender, receiver in pairs:
+            if sender:
+                raw_headers.append(sender)
+            if receiver:
+                raw_headers.append(receiver)
+
+        own_email = (request.user.email or "").strip().lower()
+
+        contacts = {}
+
+        for name, address in getaddresses(raw_headers):
+            address = address.strip().lower()
+
+            if not address or "@" not in address:
+                continue
+
+            if address == own_email:
+                continue
+
+            name = name.strip()
+
+            # Prefer keeping a display name if we find one, even if an
+            # earlier occurrence of this address had none.
+            if address not in contacts or (name and not contacts[address]):
+                contacts[address] = name
+
+        results = [
+            {"email": address, "name": name}
+            for address, name in contacts.items()
+        ]
+
+        results.sort(key=lambda c: (c["name"] or c["email"]).lower())
+
+        return Response(results[:200])
