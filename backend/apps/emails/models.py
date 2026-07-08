@@ -72,6 +72,22 @@ class EmailMetadata(models.Model):
         default=False
     )
 
+    # whether this email currently sits in the Trash (Gmail's TRASH
+    # label). Kept locally so we can time the auto-clear countdown
+    # without an extra Gmail round trip on every page load.
+    is_trashed = models.BooleanField(
+        default=False
+    )
+
+    # when the email was first noticed in Trash. Gmail's API doesn't
+    # expose a "trashed at" timestamp, so this is set the moment our
+    # app trashes the message (or first sees it trashed). Used to
+    # calculate when auto-clear should permanently delete it.
+    trashed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     class Meta:
         ordering = ["-received_at"]
 

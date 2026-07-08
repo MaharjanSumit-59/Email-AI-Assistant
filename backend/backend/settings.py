@@ -203,4 +203,10 @@ CELERY_BEAT_SCHEDULE = {
     "task": "apps.ai.tasks.process_new_emails_for_all_users",
     "schedule": timedelta(seconds=45),
     },
+    "auto-clear-trash": {
+        "task": "apps.emails.tasks.auto_clear_trash",
+        # once a day is plenty — retention is measured in days, not
+        # minutes, so there's no benefit to checking more often.
+        "schedule": crontab(hour=3, minute=0),
+    },
 }
