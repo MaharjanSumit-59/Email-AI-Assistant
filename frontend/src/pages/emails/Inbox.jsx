@@ -7,10 +7,12 @@ import {
     FiTrash2,
     FiSearch,
     FiInbox,
+    FiEdit3,
 } from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
+import ComposeModal from "../../components/emails/ComposeModal";
 import {
     getInbox,
     searchEmails,
@@ -74,6 +76,7 @@ export default function Inbox() {
     const [query, setQuery] = useState("");
     const [folder, setFolder] = useState("inbox");
     const [busyIds, setBusyIds] = useState(new Set());
+    const [composeOpen, setComposeOpen] = useState(false);
 
     // Doesn't trigger re-renders — just remembers what we last saw so a
     // "refresh" can tell whether anything actually changed.
@@ -252,14 +255,24 @@ export default function Inbox() {
                     </p>
                 </div>
 
-                <button
-                    onClick={handleRefreshClick}
-                    disabled={refreshing || cooldownActive}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-paper-raised hover:border-signal hover:text-signal text-sm font-medium disabled:opacity-40 transition-colors"
-                >
-                    <FiRefreshCw className={refreshing ? "animate-spin" : ""} />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setComposeOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-ink transition-colors"
+                    >
+                        <FiEdit3 />
+                        Compose
+                    </button>
+
+                    <button
+                        onClick={handleRefreshClick}
+                        disabled={refreshing || cooldownActive}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-paper-raised hover:border-signal hover:text-signal text-sm font-medium disabled:opacity-40 transition-colors"
+                    >
+                        <FiRefreshCw className={refreshing ? "animate-spin" : ""} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             <div className="flex gap-2 mb-6">
@@ -409,6 +422,17 @@ export default function Inbox() {
                         );
                     })}
             </div>
+
+            {composeOpen && (
+                <ComposeModal
+                    onClose={() => setComposeOpen(false)}
+                    onSent={() => {
+                        if (folder === "sent") {
+                            loadInbox({ silent: true, targetFolder: "sent" });
+                        }
+                    }}
+                />
+            )}
         </DashboardLayout>
     );
 }
