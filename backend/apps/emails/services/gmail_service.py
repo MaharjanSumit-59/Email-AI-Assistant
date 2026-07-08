@@ -92,7 +92,7 @@ class GmailService(BaseGoogleService):
                     userId=USER_ID,
                     id=message_id,
                     format="metadata",
-                    metadataHeaders=["Subject", "From", "To", "Date"]
+                    metadataHeaders=["Subject", "subject", "From", "from", "To", "to", "Date", "date"]
                 )
                 .execute()
             )
@@ -128,7 +128,7 @@ class GmailService(BaseGoogleService):
                     userId=USER_ID,
                     id=message_id,
                     format="metadata",
-                    metadataHeaders=["Subject", "From", "To", "Date"],
+                    metadataHeaders=["Subject", "subject", "From", "from", "To", "to", "Date", "date"],
                 ),
                 request_id=message_id,
             )
@@ -170,13 +170,14 @@ class GmailService(BaseGoogleService):
             date = ""
 
             for h in headers:
-                if h["name"] == "Subject":
+                name = h["name"].lower()
+                if name == "subject":
                     subject = h["value"]
-                elif h["name"] == "From":
+                elif name == "from":
                     sender = h["value"]
-                elif h["name"] == "To":
+                elif name == "to":
                     receiver = h["value"]
-                elif h["name"] == "Date":
+                elif name == "date":
                     date = h["value"]
 
             body = self.extract_body(message["payload"])
@@ -226,8 +227,8 @@ class GmailService(BaseGoogleService):
     def send_email(self, to: str, subject: str, body: str):
         try:
             message = MIMEText(body)
-            message["to"] = to
-            message["subject"] = subject
+            message["To"] = to
+            message["Subject"] = subject
 
             raw = base64.urlsafe_b64encode(
                 message.as_bytes()
@@ -259,8 +260,8 @@ class GmailService(BaseGoogleService):
     def reply_email(self, thread_id, to, subject, body):
         try:
             message = MIMEText(body)
-            message["to"] = to
-            message["subject"] = subject
+            message["To"] = to
+            message["Subject"] = subject
 
             raw = base64.urlsafe_b64encode(
                 message.as_bytes()
@@ -300,8 +301,8 @@ class GmailService(BaseGoogleService):
         """
         try:
             message = MIMEText(body)
-            message["to"] = to
-            message["subject"] = subject
+            message["To"] = to
+            message["Subject"] = subject
 
             raw = base64.urlsafe_b64encode(
                 message.as_bytes()

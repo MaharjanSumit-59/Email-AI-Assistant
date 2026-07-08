@@ -7,25 +7,28 @@ from rest_framework.exceptions import AuthenticationFailed
 
 def parse_headers(headers):
     """
-    Convert Gmail headers into a dictionary.
+    Convert Gmail headers into a dictionary. Looked up
+    case-insensitively, since some messages (older ones sent before a
+    header-casing fix) have header names like "to"/"subject" instead
+    of the conventional "To"/"Subject".
     """
 
     result = {}
 
     for header in headers:
-        result[header["name"]] = header["value"]
+        result[header["name"].lower()] = header["value"]
 
     return {
 
-        "subject": result.get("Subject", ""),
+        "subject": result.get("subject", ""),
 
-        "sender": result.get("From", ""),
+        "sender": result.get("from", ""),
 
-        "receiver": result.get("To", ""),
+        "receiver": result.get("to", ""),
 
         "received_at": parsedate_to_datetime(
-            result.get("Date")
-        ) if result.get("Date") else None,
+            result.get("date")
+        ) if result.get("date") else None,
 
     }
 
