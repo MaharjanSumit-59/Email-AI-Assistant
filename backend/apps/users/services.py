@@ -13,6 +13,12 @@ def update_profile(user, data):
     user.username = data.get("username", user.username)
     user.first_name = data.get("first_name", user.first_name)
     user.last_name = data.get("last_name", user.last_name)
+    user.automation_enabled = data.get(
+        "automation_enabled", user.automation_enabled
+    )
+    user.trash_retention_days = data.get(
+        "trash_retention_days", user.trash_retention_days
+    )
 
     user.save()
 
