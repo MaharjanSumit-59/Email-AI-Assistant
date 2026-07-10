@@ -2,6 +2,8 @@ from django.db.models import Count
 
 from apps.authentication.models import GoogleToken
 from apps.emails.models import EmailMetadata
+from apps.reminders.models import Reminder
+from apps.ai.models import EmailActionLog
 
 
 def get_profile(user):
@@ -44,10 +46,24 @@ def summary(user):
         starred=True
     ).count()
 
+    pending_reminders = Reminder.objects.filter(
+        user=user,
+        status__in=["PENDING", "NEEDS_CONFIRMATION"],
+    ).count()
+
+    automation_actions_total = EmailActionLog.objects.filter(
+        email__user=user
+    ).count()
+
+    token = GoogleToken.objects.filter(user=user).first()
+
     return {
         "total_emails": total,
         "starred_emails": starred,
         "gmail_connected": user.gmail_connected,
+        "gmail_connected_since": token.created_at if token else None,
+        "pending_reminders": pending_reminders,
+        "automation_actions_total": automation_actions_total,
     }
 
 
