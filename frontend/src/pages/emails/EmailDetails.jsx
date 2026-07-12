@@ -9,6 +9,7 @@ import {
     FiCornerUpLeft,
     FiPaperclip,
     FiDownload,
+    FiGlobe,
 } from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
 
@@ -22,6 +23,7 @@ import {
     buildEmailFormData,
     downloadAttachment,
 } from "../../services/emailService";
+import { translateEmail } from "../../services/aiService";
 import AttachmentInput from "../../components/emails/AttachmentInput";
 import { formatFileSize } from "../../utils/attachments";
 
@@ -76,6 +78,11 @@ export default function EmailDetails() {
     const [sendingReply, setSendingReply] = useState(false);
     const [downloadingId, setDownloadingId] = useState(null);
 
+    // ---- Translation ----
+    const [translation, setTranslation] = useState(null); // { detectedLanguage, translatedBody }
+    const [viewMode, setViewMode] = useState("original"); // "original" | "translated"
+    const [translating, setTranslating] = useState(false);
+
     useEffect(() => {
         let isMounted = true;
 
@@ -103,6 +110,13 @@ export default function EmailDetails() {
         return () => {
             isMounted = false;
         };
+    }, [id]);
+
+    // Reset translation state when navigating to a different email.
+    useEffect(() => {
+        setTranslation(null);
+        setViewMode("original");
+        setTranslating(false);
     }, [id]);
 
     const handleToggleStar = async () => {
@@ -189,6 +203,32 @@ export default function EmailDetails() {
             toast.error(`Couldn't download ${attachment.filename}.`);
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    // Already translated once this session -> just flip the view, no API call.
+    const handleToggleTranslate = async () => {
+        if (translation) {
+            setViewMode((prev) =>
+                prev === "original" ? "translated" : "original"
+            );
+            return;
+        }
+
+        setTranslating(true);
+
+        try {
+            const data = await translateEmail(id);
+            setTranslation({
+                detectedLanguage: data.detected_language,
+                translatedBody: data.translated_body,
+            });
+            setViewMode("translated");
+        } catch (err) {
+            console.error(err);
+            toast.error("Couldn't translate this email.");
+        } finally {
+            setTranslating(false);
         }
     };
 
@@ -283,11 +323,36 @@ export default function EmailDetails() {
                             </p>
                             <p>To: {email.to}</p>
                             <p className="font-mono text-xs">{email.date}</p>
+
+                            <button
+                                type="button"
+                                onClick={handleToggleTranslate}
+                                disabled={translating}
+                                className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-signal hover:text-ink disabled:opacity-50"
+                            >
+                                <FiGlobe size={13} />
+                                {translating
+                                    ? "Translating..."
+                                    : !translation
+                                    ? "Translate"
+                                    : viewMode === "original"
+                                    ? `Show translation (${translation.detectedLanguage} → English)`
+                                    : "Show original"}
+                            </button>
                         </div>
                     </div>
 
                     <div className="p-7 pl-8 leading-relaxed text-ink">
-                        {email.body_html ? (
+                        {viewMode === "translated" && translation ? (
+                            <>
+                                <p className="text-xs text-signal font-medium mb-3">
+                                    Translated from {translation.detectedLanguage} by AI — original wording may differ slightly.
+                                </p>
+                                <div className="whitespace-pre-wrap">
+                                    {translation.translatedBody}
+                                </div>
+                            </>
+                        ) : email.body_html ? (
                             <div
                                 className="email-html-body max-w-none"
                                 dangerouslySetInnerHTML={{

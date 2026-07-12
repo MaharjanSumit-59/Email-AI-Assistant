@@ -15,6 +15,8 @@ from .extractor import TaskExtractor
 from .models import EmailActionLog
 from .automation import EmailAutomationEngine
 
+from .translator import EmailTranslator
+
 
 class SummarizeEmailAPIView(APIView):
 
@@ -277,3 +279,42 @@ class RunAutomationNowAPIView(APIView):
         EmailAutomationEngine(request.user).run(force=True)
 
         return Response({"status": "completed"})
+    
+class TranslateEmailAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        serializer = MessageIDSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        message_id = serializer.validated_data["message_id"]
+
+        gmail = get_gmail_service(request)
+
+        email = gmail.read_email(message_id)
+
+        email_metadata = get_email_metadata(
+            request.user,
+            message_id,
+        )
+
+        translation = EmailTranslator().translate(
+            email_metadata,
+            email["body"],
+        )
+
+        return Response(
+            {
+                "message_id": message_id,
+                "original_body": email["body"],
+                "detected_language": translation["detected_language"],
+                "translated_body": translation["translated_text"],
+            }
+        )

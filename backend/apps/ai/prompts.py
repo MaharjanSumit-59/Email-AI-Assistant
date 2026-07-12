@@ -148,6 +148,9 @@ one fixed style to every email:
 
 Other rules:
 
+- The email below may be written in any language (Japanese,
+  Spanish, French, etc.). Regardless of what language it is written
+  in, always write your reply in English.
 - Do not invent facts, numbers, dates, or commitments that aren't in
   the email or common sense.
 - If specific information is missing (e.g. exact time, a document,
@@ -267,6 +270,48 @@ Rules:
 - If a person is missing, use null.
 - Extract every task separately.
 - Keep task descriptions short and clear.
+
+Email:
+
+{email_body}
+"""
+
+# ==========================================================
+# TRANSLATION
+# ==========================================================
+
+def translate_email(email_body: str) -> str:
+
+    return f"""
+You are a professional email translator.
+
+Detect the language the email below is written in, then translate
+the full email into natural, fluent English.
+
+Return ONLY valid JSON in this exact format:
+
+{{
+    "detected_language": "",
+    "translated_text": ""
+}}
+
+Field rules:
+
+- "detected_language": the name of the language the email is
+  written in (e.g. "Japanese", "Spanish", "French"), in English.
+  If the email is already in English, use "English".
+- "translated_text": the complete email translated into English,
+  preserving paragraph breaks, tone, and meaning as closely as
+  possible. Do not summarize, shorten, or omit any part of it.
+  Do not translate names, email addresses, or URLs.
+- If the email is already in English, "translated_text" should be
+  the original text, unchanged.
+
+Rules:
+
+1. Return ONLY JSON.
+2. No markdown.
+3. No explanations.
 
 Email:
 

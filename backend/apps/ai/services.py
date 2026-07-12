@@ -197,3 +197,29 @@ class AIAnalysisService:
         analysis.save()
 
         return analysis
+    
+    @staticmethod
+    def get_translation(email):
+
+        analysis = AIAnalysisService.get_or_create(email)
+
+        if analysis.translated_body:
+            return {
+                "detected_language": analysis.detected_language,
+                "translated_text": analysis.translated_body,
+            }
+
+        return None
+
+    @staticmethod
+    def save_translation(email, detected_language, translated_text):
+
+        analysis = AIAnalysisService.get_or_create(email)
+
+        analysis.detected_language = detected_language
+
+        analysis.translated_body = translated_text
+
+        analysis.save()
+
+        return analysis
