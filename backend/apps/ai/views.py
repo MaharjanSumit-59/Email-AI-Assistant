@@ -16,6 +16,7 @@ from .models import EmailActionLog
 from .automation import EmailAutomationEngine
 
 from .translator import EmailTranslator
+from .models import EmailActionLog
 
 
 class SummarizeEmailAPIView(APIView):
@@ -258,6 +259,32 @@ class EmailActionLogListAPIView(APIView):
 
         return Response(serializer.data)
 
+
+class EmailActionLogDeleteAPIView(APIView):
+    """
+    Permanently deletes one automation log entry. This only removes
+    the audit-trail row itself — it has nothing to do with Gmail
+    Trash and does not touch the underlying email or draft.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+
+        log = EmailActionLog.objects.filter(
+            id=pk,
+            email__user=request.user,
+        ).first()
+
+        if log is None:
+            return Response(
+                {"detail": "Log entry not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        log.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class RunAutomationNowAPIView(APIView):
     """
