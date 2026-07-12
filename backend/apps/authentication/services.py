@@ -132,6 +132,7 @@ def save_google_tokens(user, tokens):
         existing.refresh_token if existing else None
     )
 
+
     GoogleToken.objects.update_or_create(
         user=user,
         defaults={
@@ -143,7 +144,7 @@ def save_google_tokens(user, tokens):
         },
     )
 
-
+# this generated jwt tokens for the user to use in the frontend. The access token is short-lived and used for authentication, while the refresh token can be used to obtain new access tokens without requiring the user to log in again.
 def generate_jwt(user):
     """
     Generate JWT access & refresh tokens.
@@ -154,4 +155,5 @@ def generate_jwt(user):
     return {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
+
     }
