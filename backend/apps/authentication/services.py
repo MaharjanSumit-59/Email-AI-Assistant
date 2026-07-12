@@ -47,6 +47,7 @@ def build_google_auth_url():
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 
+
 def exchange_code_for_token(code):
     """
     Exchange authorization code for access & refresh tokens.
@@ -123,6 +124,7 @@ def save_google_tokens(user, tokens):
     expires_at = timezone.now() + timedelta(
         seconds=tokens.get("expires_in", 3600)
     )
+
 
     existing = GoogleToken.objects.filter(user=user).first()
 
