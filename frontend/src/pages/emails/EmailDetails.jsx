@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { FiArrowLeft, FiStar, FiTrash2, FiCornerUpLeft } from "react-icons/fi";
+import DOMPurify from "dompurify";
+import {
+    FiArrowLeft,
+    FiStar,
+    FiTrash2,
+    FiCornerUpLeft,
+    FiPaperclip,
+    FiDownload,
+} from "react-icons/fi";
 import { FaStar } from "react-icons/fa";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
@@ -11,7 +19,11 @@ import {
     unstarEmail,
     deleteEmail,
     replyEmail,
+    buildEmailFormData,
+    downloadAttachment,
 } from "../../services/emailService";
+import AttachmentInput from "../../components/emails/AttachmentInput";
+import { formatFileSize } from "../../utils/attachments";
 
 // Gmail "From" headers look like `Name <email@example.com>`.
 function extractEmailAddress(header) {
@@ -60,7 +72,9 @@ export default function EmailDetails() {
     const incomingDraft = location.state?.draftReply || "";
     const [showReply, setShowReply] = useState(Boolean(incomingDraft));
     const [replyBody, setReplyBody] = useState(incomingDraft);
+    const [replyAttachments, setReplyAttachments] = useState([]);
     const [sendingReply, setSendingReply] = useState(false);
+    const [downloadingId, setDownloadingId] = useState(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -133,23 +147,48 @@ export default function EmailDetails() {
         setSendingReply(true);
 
         try {
-            await replyEmail({
+            const fields = {
                 thread_id: email.thread_id,
                 to: extractEmailAddress(email.from),
                 subject: email.subject?.startsWith("Re:")
                     ? email.subject
                     : `Re: ${email.subject || ""}`,
                 body: replyBody.trim(),
-            });
+            };
+
+            const payload =
+                replyAttachments.length > 0
+                    ? buildEmailFormData(fields, replyAttachments)
+                    : fields;
+
+            await replyEmail(payload);
 
             toast.success("Reply sent");
             setReplyBody("");
+            setReplyAttachments([]);
             setShowReply(false);
         } catch (err) {
             console.error(err);
             toast.error("Couldn't send your reply.");
         } finally {
             setSendingReply(false);
+        }
+    };
+
+    const handleDownloadAttachment = async (attachment) => {
+        setDownloadingId(attachment.attachment_id);
+
+        try {
+            await downloadAttachment(
+                id,
+                attachment.attachment_id,
+                attachment.filename
+            );
+        } catch (err) {
+            console.error(err);
+            toast.error(`Couldn't download ${attachment.filename}.`);
+        } finally {
+            setDownloadingId(null);
         }
     };
 
@@ -247,9 +286,68 @@ export default function EmailDetails() {
                         </div>
                     </div>
 
-                    <div className="p-7 pl-8 whitespace-pre-wrap leading-relaxed text-ink">
-                        {email.body || email.snippet || "(no content)"}
+                    <div className="p-7 pl-8 leading-relaxed text-ink">
+                        {email.body_html ? (
+                            <div
+                                className="email-html-body max-w-none"
+                                dangerouslySetInnerHTML={{
+                                    __html: DOMPurify.sanitize(email.body_html, {
+                                        // Emails routinely link out and embed
+                                        // images inline (data: URIs, cid
+                                        // references already resolved by
+                                        // Gmail) — allow both without
+                                        // allowing scripts/iframes/forms.
+                                        ALLOWED_URI_REGEXP:
+                                            /^(?:(?:https?|mailto|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+                                        FORBID_TAGS: ["script", "style", "iframe", "form", "object", "embed"],
+                                        FORBID_ATTR: ["onerror", "onload", "onclick"],
+                                    }),
+                                }}
+                            />
+                        ) : (
+                            <div className="whitespace-pre-wrap">
+                                {email.body || email.snippet || "(no content)"}
+                            </div>
+                        )}
                     </div>
+
+                    {email.attachments?.length > 0 && (
+                        <div className="px-7 pl-8 pb-6">
+                            <p className="flex items-center gap-1.5 text-xs font-medium text-muted mb-2">
+                                <FiPaperclip size={13} />
+                                {email.attachments.length} attachment
+                                {email.attachments.length > 1 ? "s" : ""}
+                            </p>
+
+                            <div className="flex flex-wrap gap-2">
+                                {email.attachments.map((attachment) => (
+                                    <button
+                                        key={attachment.attachment_id}
+                                        type="button"
+                                        onClick={() =>
+                                            handleDownloadAttachment(attachment)
+                                        }
+                                        disabled={
+                                            downloadingId ===
+                                            attachment.attachment_id
+                                        }
+                                        className="flex items-center gap-2 border border-line rounded-lg px-3 py-2 text-sm hover:bg-paper transition-colors disabled:opacity-50"
+                                    >
+                                        <span className="truncate max-w-[180px] text-ink">
+                                            {attachment.filename}
+                                        </span>
+                                        <span className="text-faint text-xs shrink-0">
+                                            {formatFileSize(attachment.size)}
+                                        </span>
+                                        <FiDownload
+                                            size={14}
+                                            className="text-faint shrink-0"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="p-7 pl-8 border-t border-line bg-paper">
                         {!showReply ? (
@@ -281,6 +379,14 @@ export default function EmailDetails() {
                                     className="w-full border border-line bg-paper-raised rounded-lg p-3 outline-none focus:border-signal resize-none text-sm"
                                 />
 
+                                <div className="mt-2">
+                                    <AttachmentInput
+                                        files={replyAttachments}
+                                        onChange={setReplyAttachments}
+                                        disabled={sendingReply}
+                                    />
+                                </div>
+
                                 <div className="mt-3 flex items-center gap-3">
                                     <button
                                         type="submit"
@@ -299,6 +405,7 @@ export default function EmailDetails() {
                                         onClick={() => {
                                             setShowReply(false);
                                             setReplyBody("");
+                                            setReplyAttachments([]);
                                         }}
                                         className="px-4 py-2 rounded-lg border border-line text-sm font-medium hover:bg-paper-raised transition-colors"
                                     >

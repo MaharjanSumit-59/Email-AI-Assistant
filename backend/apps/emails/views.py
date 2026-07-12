@@ -4,6 +4,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
+from django.http import HttpResponse
 from django.utils import timezone
 
 from .models import EmailMetadata
@@ -15,6 +17,71 @@ from .serializers import (
     ReplyEmailSerializer,
     EmailActionSerializer
 )
+
+# Gmail's send endpoint caps the whole raw (base64-encoded) message at
+# 25MB, and base64 inflates size by ~33%, so keep some headroom on the
+# raw attachment bytes we'll accept from the client.
+MAX_ATTACHMENT_TOTAL_BYTES = 18 * 1024 * 1024
+
+# Kept intentionally broad but not "anything" — images, PDFs, and the
+# common office/document formats users actually attach to email.
+ALLOWED_ATTACHMENT_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "text/csv",
+    "application/zip",
+}
+
+
+def _collect_attachments(request):
+    """
+    Reads uploaded files from request.FILES (key "attachments", may
+    repeat) into the plain dict shape GmailService expects, enforcing
+    a total size cap and a content-type allowlist. Raises
+    ValidationError (→ 400) if a file is rejected.
+    """
+    files = request.FILES.getlist("attachments")
+
+    if not files:
+        return []
+
+    total_size = 0
+    attachments = []
+
+    for f in files:
+        content_type = f.content_type or "application/octet-stream"
+
+        if content_type not in ALLOWED_ATTACHMENT_CONTENT_TYPES:
+            raise ValidationError(
+                f"'{f.name}' has an unsupported file type ({content_type})."
+            )
+
+        total_size += f.size
+
+        if total_size > MAX_ATTACHMENT_TOTAL_BYTES:
+            raise ValidationError(
+                "Attachments are too large. Please keep the total "
+                "under 18MB."
+            )
+
+        attachments.append({
+            "filename": f.name,
+            "content_type": content_type,
+            "content": f.read(),
+        })
+
+    return attachments
 
 
 class InboxAPIView(APIView):
@@ -122,6 +189,8 @@ class SendEmailAPIView(APIView):
             raise_exception=True
         )
 
+        attachments = _collect_attachments(request)
+
         gmail = get_gmail_service(request)
 
         result = gmail.send_email(
@@ -130,7 +199,9 @@ class SendEmailAPIView(APIView):
 
             serializer.validated_data["subject"],
 
-            serializer.validated_data["body"]
+            serializer.validated_data["body"],
+
+            attachments=attachments,
 
         )
 
@@ -156,6 +227,8 @@ class ReplyEmailAPIView(APIView):
             raise_exception=True
         )
 
+        attachments = _collect_attachments(request)
+
         gmail = get_gmail_service(request)
 
         result = gmail.reply_email(
@@ -166,7 +239,9 @@ class ReplyEmailAPIView(APIView):
 
             serializer.validated_data["subject"],
 
-            serializer.validated_data["body"]
+            serializer.validated_data["body"],
+
+            attachments=attachments,
 
         )
 
@@ -646,3 +721,46 @@ class ContactSuggestionsAPIView(APIView):
         results.sort(key=lambda c: (c["name"] or c["email"]).lower())
 
         return Response(results[:200])
+
+
+class DownloadAttachmentAPIView(APIView):
+    """
+    Streams a single Gmail attachment back to the client so it can be
+    saved to disk. Filename/mime type are looked up fresh from Gmail
+    (rather than trusted from the URL) so a tampered request can't be
+    used to inject arbitrary response headers.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, message_id, attachment_id):
+
+        gmail = get_gmail_service(request)
+
+        meta = gmail.find_attachment_meta(message_id, attachment_id)
+
+        if meta is None:
+            return Response(
+                {"error": "Attachment not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        data = gmail.get_attachment(
+            message_id,
+            gmail_attachment_id=meta.get("_gmail_attachment_id"),
+            inline_data=meta.get("_inline_data"),
+        )
+
+        filename = (meta.get("filename") or "attachment").replace('"', "")
+        # Header values can't contain CR/LF — strip them defensively
+        # even though Gmail filenames shouldn't contain them.
+        filename = filename.replace("\r", "").replace("\n", "")
+
+        response = HttpResponse(
+            data,
+            content_type=meta.get("mime_type") or "application/octet-stream",
+        )
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Length"] = str(len(data))
+
+        return response

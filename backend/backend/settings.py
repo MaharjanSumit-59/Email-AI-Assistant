@@ -167,6 +167,12 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = "users.User"
 
+# Raised from Django's 2.5MB default so compose/reply can accept email
+# attachments (images, PDFs, docx, etc.) up to a reasonable size. Kept
+# in line with MAX_ATTACHMENT_TOTAL_BYTES enforced in apps/emails/views.py.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+
 
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")

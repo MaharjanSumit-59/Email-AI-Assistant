@@ -14,6 +14,7 @@ from .views import (
     PermanentDeleteEmailAPIView,
     EmptyTrashAPIView,
     ContactSuggestionsAPIView,
+    DownloadAttachmentAPIView,
 )
 
 urlpatterns = [
@@ -88,6 +89,12 @@ urlpatterns = [
         "permanent-delete/",
         PermanentDeleteEmailAPIView.as_view(),
         name="permanent-delete-email"
+    ),
+
+    path(
+        "<str:message_id>/attachments/<str:attachment_id>/",
+        DownloadAttachmentAPIView.as_view(),
+        name="download-attachment"
     ),
 
     path(
