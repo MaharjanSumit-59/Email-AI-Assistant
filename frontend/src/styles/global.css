@@ -55,3 +55,27 @@ body {
         scroll-behavior: auto !important;
     }
 }
+
+/* Sanitized HTML email bodies (EmailDetails) — emails bring their own
+   inline styles, but we still need sane defaults so they don't blow
+   out the layout (full-width tables, oversized images, etc). */
+.email-html-body {
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: auto;
+    word-wrap: break-word;
+}
+
+.email-html-body img {
+    max-width: 100%;
+    height: auto;
+}
+
+.email-html-body table {
+    max-width: 100%;
+}
+
+.email-html-body a {
+    color: var(--color-signal);
+}
+

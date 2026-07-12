@@ -2,12 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { FiX, FiSend } from "react-icons/fi";
 
-import { sendEmail, getContactSuggestions } from "../../services/emailService";
+import {
+    sendEmail,
+    getContactSuggestions,
+    buildEmailFormData,
+} from "../../services/emailService";
+import AttachmentInput from "./AttachmentInput";
 
 export default function ComposeModal({ onClose, onSent }) {
     const [to, setTo] = useState("");
     const [subject, setSubject] = useState("");
     const [body, setBody] = useState("");
+    const [attachments, setAttachments] = useState([]);
     const [sending, setSending] = useState(false);
 
     const [contacts, setContacts] = useState([]);
@@ -54,11 +60,18 @@ export default function ComposeModal({ onClose, onSent }) {
         setSending(true);
 
         try {
-            await sendEmail({
+            const fields = {
                 to: to.trim(),
                 subject: subject.trim(),
                 body: body.trim(),
-            });
+            };
+
+            const payload =
+                attachments.length > 0
+                    ? buildEmailFormData(fields, attachments)
+                    : fields;
+
+            await sendEmail(payload);
 
             toast.success("Email sent");
             onSent?.();
@@ -159,6 +172,12 @@ export default function ComposeModal({ onClose, onSent }) {
                             placeholder="Write your message..."
                             rows={8}
                             className="w-full outline-none bg-transparent text-sm resize-none"
+                        />
+
+                        <AttachmentInput
+                            files={attachments}
+                            onChange={setAttachments}
+                            disabled={sending}
                         />
                     </div>
 
