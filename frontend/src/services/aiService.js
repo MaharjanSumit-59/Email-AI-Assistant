@@ -40,6 +40,12 @@ export const getActionLogs = async (action) => {
     return response.data;
 };
 
+export const deleteActionLog = async (logId) => {
+    const response = await api.delete(`/ai/logs/${logId}/`);
+
+    return response.data;
+};
+
 export const runAutomationNow = async () => {
     const response = await api.post("/ai/run-now/");
 

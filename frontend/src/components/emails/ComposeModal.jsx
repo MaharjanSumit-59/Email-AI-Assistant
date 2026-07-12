@@ -90,14 +90,14 @@ export default function ComposeModal({ onClose, onSent }) {
 
     return (
         <div
-            className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 px-4"
+            className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 px-4 py-6"
             onClick={onClose}
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="bg-paper-raised border border-line rounded-xl w-full max-w-lg shadow-xl"
+                className="bg-paper-raised border border-line rounded-xl w-full max-w-lg max-h-full flex flex-col shadow-xl"
             >
-                <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
                     <h2 className="font-display text-lg">New message</h2>
                     <button
                         onClick={onClose}
@@ -108,8 +108,8 @@ export default function ComposeModal({ onClose, onSent }) {
                     </button>
                 </div>
 
-                <form onSubmit={handleSend}>
-                    <div className="px-5 py-4 space-y-3">
+                <form onSubmit={handleSend} className="flex flex-col min-h-0">
+                    <div className="px-5 py-4 space-y-3 overflow-y-auto">
                         <div className="relative">
                             <input
                                 type="email"
@@ -181,7 +181,7 @@ export default function ComposeModal({ onClose, onSent }) {
                         />
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-line">
+                    <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-line shrink-0">
                         <button
                             type="button"
                             onClick={onClose}

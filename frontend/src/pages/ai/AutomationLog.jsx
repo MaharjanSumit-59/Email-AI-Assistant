@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
     FiActivity,
@@ -9,10 +10,16 @@ import {
     FiAlertTriangle,
     FiChevronDown,
     FiChevronUp,
+    FiCornerUpLeft,
+    FiTrash2,
 } from "react-icons/fi";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
-import { getActionLogs, runAutomationNow } from "../../services/aiService";
+import {
+    getActionLogs,
+    runAutomationNow,
+    deleteActionLog,
+} from "../../services/aiService";
 
 function formatSender(sender) {
     if (!sender) return "Unknown sender";
@@ -65,8 +72,10 @@ const FILTERS = [
     { value: "failed", label: "Failed" },
 ];
 
-function LogRow({ log }) {
+function LogRow({ log, onDelete }) {
     const [expanded, setExpanded] = useState(false);
+    const navigate = useNavigate();
+
     const meta = ACTION_META[log.action] || {
         label: log.action,
         icon: <FiActivity />,
@@ -74,12 +83,43 @@ function LogRow({ log }) {
     };
 
     const hasBody = log.reply_content || log.reasoning || log.error_message;
+    const isDraft = log.action === "draft_created" && log.gmail_message_id;
+
+    const handleOpenDraft = (e) => {
+        e.stopPropagation();
+        navigate(`/email/${log.gmail_message_id}`, {
+            state: { draftReply: log.reply_content },
+        });
+    };
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+
+        if (
+            !window.confirm(
+                "Permanently delete this log entry? This can't be undone."
+            )
+        ) {
+            return;
+        }
+
+        onDelete(log.id);
+    };
+
+    const handleToggle = () => {
+        if (hasBody) setExpanded((e) => !e);
+    };
 
     return (
         <div className="bg-paper-raised border border-line rounded-xl overflow-hidden">
-            <button
-                onClick={() => hasBody && setExpanded((e) => !e)}
-                className="w-full flex items-center gap-4 px-5 py-4 text-left"
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={handleToggle}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleToggle();
+                }}
+                className="w-full flex flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-5 py-4 text-left cursor-pointer"
             >
                 <span
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${meta.badge}`}
@@ -88,7 +128,7 @@ function LogRow({ log }) {
                     {meta.label}
                 </span>
 
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-40">
                     <p className="text-sm font-medium text-ink truncate">
                         {log.subject || "(no subject)"}
                     </p>
@@ -97,7 +137,7 @@ function LogRow({ log }) {
                     </p>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-2 shrink-0">
+                <div className="hidden md:flex items-center gap-2 shrink-0">
                     {log.importance && (
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-paper text-muted">
                             {log.importance}
@@ -115,24 +155,46 @@ function LogRow({ log }) {
                     )}
                 </div>
 
-                <span className="text-xs text-faint font-mono shrink-0 w-24 text-right">
+                <span className="text-xs text-faint font-mono shrink-0 w-20 sm:w-24 text-right">
                     {formatWhen(log.created_at)}
                 </span>
 
-                {hasBody &&
-                    (expanded ? (
-                        <FiChevronUp className="text-faint shrink-0" />
-                    ) : (
-                        <FiChevronDown className="text-faint shrink-0" />
-                    ))}
-            </button>
+                <div className="flex items-center gap-3 shrink-0 ml-auto">
+                    {isDraft && (
+                        <button
+                            type="button"
+                            onClick={handleOpenDraft}
+                            title="Open reply page"
+                            className="flex items-center gap-1 text-xs font-medium text-signal hover:text-ink"
+                        >
+                            <FiCornerUpLeft size={14} />
+                            <span className="hidden sm:inline">Open draft</span>
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        title="Permanently delete"
+                        aria-label="Permanently delete log entry"
+                        className="text-faint hover:text-ember"
+                    >
+                        <FiTrash2 size={15} />
+                    </button>
+
+                    {hasBody &&
+                        (expanded ? (
+                            <FiChevronUp className="text-faint shrink-0" />
+                        ) : (
+                            <FiChevronDown className="text-faint shrink-0" />
+                        ))}
+                </div>
+            </div>
 
             {expanded && hasBody && (
-                <div className="px-5 pb-5 pt-1 border-t border-line space-y-3">
+                <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-line space-y-3">
                     {log.reasoning && (
-                        <p className="text-sm text-muted">
-                            {log.reasoning}
-                        </p>
+                        <p className="text-sm text-muted">{log.reasoning}</p>
                     )}
 
                     {log.reply_content && (
@@ -204,11 +266,27 @@ export default function AutomationLog() {
         }
     };
 
+    const handleDeleteLog = async (logId) => {
+        const previous = logs;
+
+        // optimistic removal
+        setLogs((prev) => prev.filter((l) => l.id !== logId));
+
+        try {
+            await deleteActionLog(logId);
+            toast.success("Log entry deleted");
+        } catch (err) {
+            console.error(err);
+            toast.error("Couldn't delete this log entry.");
+            setLogs(previous);
+        }
+    };
+
     return (
         <DashboardLayout>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="font-display text-3xl">
+                    <h1 className="font-display text-2xl sm:text-3xl">
                         Automation log
                     </h1>
                     <p className="text-muted text-sm mt-1">
@@ -220,14 +298,14 @@ export default function AutomationLog() {
                 <button
                     onClick={handleRunNow}
                     disabled={running}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-ink disabled:opacity-40 transition-colors shrink-0"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-ink disabled:opacity-40 transition-colors shrink-0 self-start sm:self-auto"
                 >
                     <FiRefreshCw className={running ? "animate-spin" : ""} />
                     {running ? "Running..." : "Run now"}
                 </button>
             </div>
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 flex-wrap">
                 {FILTERS.map((f) => (
                     <button
                         key={f.value}
@@ -266,7 +344,11 @@ export default function AutomationLog() {
             {!loading && !error && logs.length > 0 && (
                 <div className="space-y-3">
                     {logs.map((log) => (
-                        <LogRow key={log.id} log={log} />
+                        <LogRow
+                            key={log.id}
+                            log={log}
+                            onDelete={handleDeleteLog}
+                        />
                     ))}
                 </div>
             )}

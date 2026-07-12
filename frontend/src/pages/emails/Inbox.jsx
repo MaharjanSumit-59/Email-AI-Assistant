@@ -241,9 +241,9 @@ export default function Inbox() {
 
     return (
         <DashboardLayout>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="font-display text-3xl">
+                    <h1 className="font-display text-2xl sm:text-3xl">
                         {folder === "sent" ? "Sent" : "Inbox"}
                     </h1>
                     <p className="text-sm text-muted mt-1">
@@ -255,7 +255,7 @@ export default function Inbox() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <button
                         onClick={() => setComposeOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-signal text-white text-sm font-medium hover:bg-ink transition-colors"
@@ -275,7 +275,7 @@ export default function Inbox() {
                 </div>
             </div>
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 flex-wrap">
                 <button
                     onClick={() => handleFolderChange("inbox")}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -299,14 +299,14 @@ export default function Inbox() {
             </div>
 
             <form onSubmit={handleSearch} className="mb-6">
-                <div className="flex items-center gap-3 bg-paper-raised border border-line rounded-lg px-4 py-3 max-w-xl focus-within:border-signal transition-colors">
+                <div className="flex items-center gap-3 bg-paper-raised border border-line rounded-lg px-4 py-3 w-full max-w-xl focus-within:border-signal transition-colors">
                     <FiSearch className="text-faint shrink-0" />
                     <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search emails..."
-                        className="w-full outline-none bg-transparent text-sm"
+                        className="w-full min-w-0 outline-none bg-transparent text-sm"
                     />
                 </div>
             </form>
@@ -354,7 +354,7 @@ export default function Inbox() {
                                         state: { preview: email },
                                     })
                                 }
-                                className={`relative flex items-center gap-4 pl-6 pr-5 py-4 border-b border-line last:border-b-0 cursor-pointer hover:bg-paper transition-colors ${
+                                className={`relative flex items-center gap-3 sm:gap-4 pl-6 pr-4 sm:pr-5 py-4 border-b border-line last:border-b-0 cursor-pointer hover:bg-paper transition-colors ${
                                     isBusy ? "opacity-50" : ""
                                 }`}
                             >
@@ -391,22 +391,26 @@ export default function Inbox() {
                                     />
                                 </button>
 
-                                <div className="w-48 shrink-0 font-medium truncate text-sm">
+                                {/* Shrinks on mobile instead of forcing page-wide overflow */}
+                                <div className="w-20 sm:w-48 shrink-0 font-medium truncate text-sm">
                                     {folder === "sent"
                                         ? `To: ${formatSender(email.receiver)}`
                                         : formatSender(email.sender)}
                                 </div>
 
+                                {/* min-w-0 is essential here — without it this flex item
+                                    won't shrink below its content width and pushes
+                                    everything else (including the row) off-screen. */}
                                 <div className="flex-1 min-w-0 flex items-baseline gap-2">
                                     <span className="font-medium truncate text-sm">
                                         {email.subject || "(no subject)"}
                                     </span>
-                                    <span className="text-faint text-sm truncate">
+                                    <span className="text-faint text-sm truncate hidden sm:inline">
                                         — {email.snippet}
                                     </span>
                                 </div>
 
-                                <div className="font-mono text-xs text-faint shrink-0 w-16 text-right">
+                                <div className="font-mono text-xs text-faint shrink-0 w-12 sm:w-16 text-right">
                                     {formatDate(email.received_at)}
                                 </div>
 
