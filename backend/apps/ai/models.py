@@ -49,6 +49,16 @@ class AIAnalysis(models.Model):
         blank=True,
     )
 
+    # ---------- Translation (cached so we don't re-call Gemini) ----------
+    detected_language = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    translated_body = models.TextField(
+        blank=True,
+    )
+
     extracted_tasks = models.JSONField(
         default=list,
         blank=True,

@@ -45,3 +45,11 @@ export const runAutomationNow = async () => {
 
     return response.data;
 };
+
+export const translateEmail = async (messageId) => {
+    const response = await api.post("/ai/translate/", {
+        message_id: messageId,
+    });
+
+    return response.data;
+};
