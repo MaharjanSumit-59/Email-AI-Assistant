@@ -47,6 +47,7 @@ def build_google_auth_url():
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 
+
 def exchange_code_for_token(code):
     """
     Exchange authorization code for access & refresh tokens.
@@ -124,11 +125,13 @@ def save_google_tokens(user, tokens):
         seconds=tokens.get("expires_in", 3600)
     )
 
+
     existing = GoogleToken.objects.filter(user=user).first()
 
     refresh_token = tokens.get("refresh_token") or (
         existing.refresh_token if existing else None
     )
+
 
     GoogleToken.objects.update_or_create(
         user=user,
@@ -141,7 +144,7 @@ def save_google_tokens(user, tokens):
         },
     )
 
-
+# this generated jwt tokens for the user to use in the frontend. The access token is short-lived and used for authentication, while the refresh token can be used to obtain new access tokens without requiring the user to log in again.
 def generate_jwt(user):
     """
     Generate JWT access & refresh tokens.
@@ -152,4 +155,5 @@ def generate_jwt(user):
     return {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
+
     }

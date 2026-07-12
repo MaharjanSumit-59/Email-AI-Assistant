@@ -1,3 +1,4 @@
+import { FiMenu } from "react-icons/fi";
 import useAuth from "../../hooks/useAuth";
 
 function greeting() {
@@ -7,18 +8,28 @@ function greeting() {
     return "Good evening";
 }
 
-export default function Navbar() {
+export default function Navbar({ onMenuClick = () => {} }) {
     const { user } = useAuth();
 
     return (
-        <header className="h-16 bg-paper-raised border-b border-line flex items-center justify-between px-8 shrink-0">
-            <p className="text-sm text-muted">
-                {greeting()}
-                {user?.first_name ? `, ${user.first_name}` : ""}.
-            </p>
+        <header className="h-16 bg-paper-raised border-b border-line flex items-center justify-between gap-3 px-4 sm:px-8 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+                <button
+                    onClick={onMenuClick}
+                    aria-label="Open menu"
+                    className="text-muted hover:text-ink md:hidden shrink-0"
+                >
+                    <FiMenu size={22} />
+                </button>
 
-            <div className="flex items-center gap-3">
-                <div className="text-right leading-tight">
+                <p className="text-sm text-muted truncate hidden sm:block">
+                    {greeting()}
+                    {user?.first_name ? `, ${user.first_name}` : ""}.
+                </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+                <div className="text-right leading-tight hidden sm:block">
                     <p className="text-sm font-medium">
                         {user?.first_name} {user?.last_name}
                     </p>
@@ -32,7 +43,7 @@ export default function Navbar() {
                             encodeURIComponent(user?.first_name || "U")
                     }
                     alt=""
-                    className="w-9 h-9 rounded-full border border-line"
+                    className="w-9 h-9 rounded-full border border-line shrink-0"
                 />
             </div>
         </header>

@@ -7,8 +7,8 @@ from .views import (
     AnalyzeEmailAPIView,
     ExtractTasksAPIView,
     EmailActionLogListAPIView,
+    EmailActionLogDeleteAPIView,
     RunAutomationNowAPIView,
-    TranslateEmailAPIView,
 )
 
 urlpatterns = [
@@ -18,38 +18,38 @@ urlpatterns = [
         name="summarize-email",
     ),
     path(
-    "reply/",
-    GenerateReplyAPIView.as_view(),
-    name="generate-reply",
-),
-    
+        "reply/",
+        GenerateReplyAPIView.as_view(),
+        name="generate-reply",
+    ),
+
     path(
-    "test-decision/",
-    TestDecisionAPIView.as_view(),
-    name="test-decision",
-),
-    
+        "test-decision/",
+        TestDecisionAPIView.as_view(),
+        name="test-decision",
+    ),
+
     path(
-    "analyze/",
-    AnalyzeEmailAPIView.as_view(),
-),
+        "analyze/",
+        AnalyzeEmailAPIView.as_view(),
+    ),
     path(
-    "tasks/",
-    ExtractTasksAPIView.as_view(),
-),
+        "tasks/",
+        ExtractTasksAPIView.as_view(),
+    ),
     path(
         "logs/",
         EmailActionLogListAPIView.as_view(),
         name="action-logs",
     ),
     path(
+        "logs/<int:pk>/",
+        EmailActionLogDeleteAPIView.as_view(),
+        name="action-log-delete",
+    ),
+    path(
         "run-now/",
         RunAutomationNowAPIView.as_view(),
         name="run-automation-now",
-    ),
-    path(
-        "translate/",
-        TranslateEmailAPIView.as_view(),
-        name="translate-email",
     ),
 ]
