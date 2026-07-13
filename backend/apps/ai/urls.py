@@ -9,6 +9,7 @@ from .views import (
     EmailActionLogListAPIView,
     EmailActionLogDeleteAPIView,
     RunAutomationNowAPIView,
+    TranslateEmailAPIView
 )
 
 urlpatterns = [
@@ -51,5 +52,10 @@ urlpatterns = [
         "run-now/",
         RunAutomationNowAPIView.as_view(),
         name="run-automation-now",
+    ),
+    path(
+        "translate/",
+        TranslateEmailAPIView.as_view(),
+        name="translate-email",
     ),
 ]
