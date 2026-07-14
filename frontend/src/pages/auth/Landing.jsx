@@ -265,7 +265,7 @@ const TRUST_POINTS = [
     {
         icon: <FiLock size={16} />,
         title: "Your inbox stays yours",
-        body: "Signal reads and drafts inside your mailbox. Nothing is copied out except what it needs to do the job.",
+        body: "Proxima reads and drafts inside your mailbox. Nothing is copied out except what it needs to do the job.",
     },
     {
         icon: <FiEye size={16} />,
@@ -324,9 +324,16 @@ export default function Landing() {
         <div className="min-h-screen bg-paper text-ink">
             <header className="sticky top-0 z-50 bg-paper/85 backdrop-blur-md border-b border-line">
                 <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-                    <span className="font-display text-xl tracking-tight">
-                        Signal
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <img
+                            src="/proxima.png"
+                            alt="Proxima Logo"
+                            className="w-12 h-10"
+                        />
+                        <span className="font-display text-xl tracking-tight">
+                            Proxima
+                        </span>
+                    </div>
                     <nav className="hidden md:flex items-center gap-8 text-sm text-muted">
                         <a href="#how-it-works" className="hover:text-ink transition-colors">
                             How it works
@@ -353,7 +360,7 @@ export default function Landing() {
                         Know <em className="italic text-signal">more</em>.
                     </h1>
                     <p className="text-lg text-muted max-w-md mb-8 leading-relaxed">
-                        Signal reads your inbox before you do — sorting what
+                        Proxima reads your inbox before you do — sorting what
                         matters from what doesn't, summarizing the rest, and
                         drafting replies so you can clear your day in
                         minutes.
@@ -456,7 +463,7 @@ export default function Landing() {
                 <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <p className="text-xs text-faint max-w-sm">
                         Built on the Gmail API. Your messages stay in your
-                        mailbox — Signal only stores what it needs to keep
+                        mailbox — Proxima only stores what it needs to keep
                         your inbox organized.
                     </p>
                     <div className="flex items-center gap-2 text-xs text-faint">

@@ -51,7 +51,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
             >
                 <div className="flex items-center justify-between px-6 pt-7 pb-6">
                     <span className="font-display text-xl tracking-tight">
-                        Signal
+                        Proxima
                     </span>
 
                     <button
