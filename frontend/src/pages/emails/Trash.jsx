@@ -11,6 +11,7 @@ import {
 import DashboardLayout from "../../layouts/DashboardLayout";
 import {
     getTrash,
+    getEmail,
     restoreEmail,
     permanentlyDeleteEmail,
     emptyTrash,
@@ -114,10 +115,30 @@ export default function Trash() {
 
         try {
             await restoreEmail(id);
+
+            // Don't just trust the restore call succeeded — read the
+            // message straight back from Gmail and check its actual
+            // labels. This is the real proof it worked, and it stays
+            // on this page instead of bouncing you somewhere else to
+            // "go check."
+            const fresh = await getEmail(id);
+            const labels = fresh.label_ids || [];
+            const stillTrashed = labels.includes("TRASH");
+            const backInInbox = labels.includes("INBOX");
+
+            if (stillTrashed || !backInInbox) {
+                toast.error(
+                    "Gmail didn't confirm the restore. Try again in a moment."
+                );
+                // Leave it in the list (don't remove it) since it's
+                // still genuinely in Trash as far as Gmail is concerned.
+                return;
+            }
+
             setEmails((prev) =>
                 prev.filter((item) => item.gmail_message_id !== id)
             );
-            toast.success("Email restored to inbox");
+            toast.success("Email restored to your inbox.");
         } catch (err) {
             console.error(err);
             toast.error("Couldn't restore this email.");
@@ -184,9 +205,11 @@ export default function Trash() {
 
     return (
         <DashboardLayout>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="font-display text-3xl">Trash</h1>
+                    <h1 className="font-display text-2xl sm:text-3xl">
+                        Trash
+                    </h1>
                     <p className="text-sm text-muted mt-1">
                         {loading
                             ? "Checking your trash..."
@@ -201,7 +224,7 @@ export default function Trash() {
                 <button
                     onClick={handleEmptyTrash}
                     disabled={emptying || loading || emails.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-paper-raised hover:border-ember hover:text-ember text-sm font-medium disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-line bg-paper-raised hover:border-ember hover:text-ember text-sm font-medium disabled:opacity-40 transition-colors shrink-0 self-start sm:self-auto"
                 >
                     <FiTrash />
                     Empty trash
@@ -245,14 +268,17 @@ export default function Trash() {
                                 key={id}
                                 onClick={() =>
                                     navigate(`/email/${id}`, {
-                                        state: { preview: email },
+                                        state: {
+                                            preview: email,
+                                            from: "/trash",
+                                        },
                                     })
                                 }
-                                className={`relative flex items-center gap-4 pl-6 pr-5 py-4 border-b border-line last:border-b-0 cursor-pointer hover:bg-paper transition-colors ${
+                                className={`relative flex items-center gap-3 sm:gap-4 pl-6 pr-4 sm:pr-5 py-4 border-b border-line last:border-b-0 cursor-pointer hover:bg-paper transition-colors ${
                                     isBusy ? "opacity-50" : ""
                                 }`}
                             >
-                                <div className="w-48 shrink-0 font-medium truncate text-sm">
+                                <div className="w-20 sm:w-48 shrink-0 font-medium truncate text-sm">
                                     {formatSender(email.sender)}
                                 </div>
 
@@ -260,17 +286,17 @@ export default function Trash() {
                                     <span className="font-medium truncate text-sm">
                                         {email.subject || "(no subject)"}
                                     </span>
-                                    <span className="text-faint text-sm truncate">
+                                    <span className="text-faint text-sm truncate hidden sm:inline">
                                         — {email.snippet}
                                     </span>
                                 </div>
 
-                                <div className="font-mono text-xs text-faint shrink-0 w-16 text-right">
+                                <div className="font-mono text-xs text-faint shrink-0 w-12 sm:w-16 text-right">
                                     {formatDate(email.received_at)}
                                 </div>
 
                                 <span
-                                    className={`flex items-center gap-1 shrink-0 px-2 py-1 rounded-full text-xs font-medium ${daysLeftBadge(
+                                    className={`hidden sm:flex items-center gap-1 shrink-0 px-2 py-1 rounded-full text-xs font-medium ${daysLeftBadge(
                                         email.days_remaining
                                     )}`}
                                     title={`Permanently deleted in ${email.days_remaining} day(s)`}

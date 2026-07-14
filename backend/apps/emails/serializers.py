@@ -27,7 +27,10 @@ class SendEmailSerializer(serializers.Serializer):
     to = serializers.EmailField()
 
     subject = serializers.CharField(
-        max_length=255
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default="",
     )
 
     body = serializers.CharField()
@@ -40,7 +43,10 @@ class ReplyEmailSerializer(serializers.Serializer):
     to = serializers.EmailField()
 
     subject = serializers.CharField(
-        max_length=255
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default="",
     )
 
     body = serializers.CharField()

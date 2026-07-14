@@ -57,6 +57,13 @@ export default function ComposeModal({ onClose, onSent }) {
             return;
         }
 
+        if (!subject.trim()) {
+            const confirmed = window.confirm(
+                "Send this email without a subject?"
+            );
+            if (!confirmed) return;
+        }
+
         setSending(true);
 
         try {
