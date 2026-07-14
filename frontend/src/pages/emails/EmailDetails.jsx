@@ -63,6 +63,8 @@ export default function EmailDetails() {
     // Carried over from the Inbox row so we can paint the priority bar and
     // category chip instantly, before the full email has loaded.
     const preview = location.state?.preview;
+    const backTo = location.state?.from || "/inbox";
+    const backLabel = backTo === "/trash" ? "Back to trash" : "Back to inbox";
 
     const [email, setEmail] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -239,11 +241,11 @@ export default function EmailDetails() {
     return (
         <DashboardLayout>
             <Link
-                to="/inbox"
+                to={backTo}
                 className="inline-flex items-center gap-2 text-sm text-muted hover:text-ink mb-6"
             >
                 <FiArrowLeft />
-                Back to inbox
+                {backLabel}
             </Link>
 
             {loading && (

@@ -608,11 +608,22 @@ class GmailService(BaseGoogleService):
     # -------------------------
     # RESTORE EMAIL (out of Trash)
     # -------------------------
+    # -------------------------
+    # RESTORE EMAIL (out of Trash)
+    # -------------------------
     def restore_email(self, message_id):
         try:
-            self.service.users().messages().untrash(
+            # messages.untrash() alone isn't reliable about restoring
+            # the INBOX label — it only guarantees TRASH is removed.
+            # Doing it explicitly via modify() guarantees both in one
+            # atomic call: TRASH off, INBOX back on.
+            self.service.users().messages().modify(
                 userId=USER_ID,
-                id=message_id
+                id=message_id,
+                body={
+                    "removeLabelIds": ["TRASH"],
+                    "addLabelIds": ["INBOX"],
+                },
             ).execute()
 
             return {

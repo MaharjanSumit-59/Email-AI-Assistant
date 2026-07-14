@@ -351,7 +351,7 @@ export default function Inbox() {
                                 key={id}
                                 onClick={() =>
                                     navigate(`/email/${id}`, {
-                                        state: { preview: email },
+                                        state: { preview: email, from: "/inbox" },
                                     })
                                 }
                                 className={`relative flex items-center gap-3 sm:gap-4 pl-6 pr-4 sm:pr-5 py-4 border-b border-line last:border-b-0 cursor-pointer hover:bg-paper transition-colors ${

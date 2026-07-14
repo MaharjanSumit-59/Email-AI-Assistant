@@ -100,7 +100,7 @@ class InboxAPIView(APIView):
         folder = request.query_params.get("folder", "inbox").lower()
         label_ids = self.FOLDER_LABELS.get(folder, ["INBOX"])
 
-        messages = gmail.fetch_inbox(max_results=25, label_ids=label_ids)
+        messages = gmail.fetch_inbox(max_results=50, label_ids=label_ids)
 
         message_ids = [message["id"] for message in messages]
 
