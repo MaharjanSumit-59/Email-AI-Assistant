@@ -56,3 +56,8 @@ poetry.lock
 
 # Pipenv
 Pipfile.lock
+
+
+dump.rdb
+
+backend/celerybeat-schedule*
