@@ -14,6 +14,17 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv(
+    "GEMINI_MODEL",
+    "gemini-2.5-flash"
+)
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -39,12 +50,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "rest_framework",
+    "corsheaders",
     'apps.users',
     'apps.ai',
     'apps.authentication',
     'apps.dashboard',
     'apps.emails',
-    'apps.remainders',
+    'apps.reminders',
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -139,7 +153,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kathmandu'
 
 USE_I18N = True
 
@@ -153,9 +167,52 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = "users.User"
 
+# Raised from Django's 2.5MB default so compose/reply can accept email
+# attachments (images, PDFs, docx, etc.) up to a reasonable size. Kept
+# in line with MAX_ATTACHMENT_TOTAL_BYTES enforced in apps/emails/views.py.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+
 
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
+
+# -------------------------
+# Celery Configuration
+# -------------------------
+
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+
+CELERY_RESULT_BACKEND = "django-db"
+
+CELERY_ACCEPT_CONTENT = ["json"]
+
+CELERY_TASK_SERIALIZER = "json"
+
+CELERY_RESULT_SERIALIZER = "json"
+
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_ENABLE_UTC = True
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "check-due-reminders": {
+        "task": "apps.reminders.tasks.check_due_reminders",
+        "schedule": crontab(minute="*"),
+    },
+    "process-new-emails": {
+    "task": "apps.ai.tasks.process_new_emails_for_all_users",
+    "schedule": timedelta(seconds=45),
+    },
+    "auto-clear-trash": {
+        "task": "apps.emails.tasks.auto_clear_trash",
+        # once a day is plenty — retention is measured in days, not
+        # minutes, so there's no benefit to checking more often.
+        "schedule": crontab(hour=3, minute=0),
+    },
+}

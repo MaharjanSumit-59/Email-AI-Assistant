@@ -8,7 +8,13 @@ from .views import (
     SearchEmailAPIView,
     StarEmailAPIView,
     UnstarEmailAPIView,
-    DeleteEmailAPIView
+    DeleteEmailAPIView,
+    TrashAPIView,
+    RestoreEmailAPIView,
+    PermanentDeleteEmailAPIView,
+    EmptyTrashAPIView,
+    ContactSuggestionsAPIView,
+    DownloadAttachmentAPIView,
 )
 
 urlpatterns = [
@@ -23,6 +29,12 @@ urlpatterns = [
         "search/",
         SearchEmailAPIView.as_view(),
         name="search-email"
+    ),
+
+    path(
+        "contacts/",
+        ContactSuggestionsAPIView.as_view(),
+        name="contact-suggestions"
     ),
 
     path(
@@ -53,6 +65,36 @@ urlpatterns = [
         "delete/",
         DeleteEmailAPIView.as_view(),
         name="delete-email"
+    ),
+
+    path(
+        "trash/",
+        TrashAPIView.as_view(),
+        name="list-trash"
+    ),
+
+    path(
+        "trash/empty/",
+        EmptyTrashAPIView.as_view(),
+        name="empty-trash"
+    ),
+
+    path(
+        "restore/",
+        RestoreEmailAPIView.as_view(),
+        name="restore-email"
+    ),
+
+    path(
+        "permanent-delete/",
+        PermanentDeleteEmailAPIView.as_view(),
+        name="permanent-delete-email"
+    ),
+
+    path(
+        "<str:message_id>/attachments/<str:attachment_id>/",
+        DownloadAttachmentAPIView.as_view(),
+        name="download-attachment"
     ),
 
     path(
