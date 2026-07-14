@@ -1,11 +1,27 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiZap, FiFileText, FiCornerUpLeft, FiCheckSquare } from "react-icons/fi";
+import {
+    FiZap,
+    FiFileText,
+    FiCornerUpLeft,
+    FiCheckSquare,
+    FiSend,
+    FiEdit3,
+    FiSkipForward,
+    FiMail,
+    FiSliders,
+    FiBellOff,
+    FiLock,
+    FiEye,
+    FiPower,
+} from "react-icons/fi";
 
 import useAuth from "../../hooks/useAuth";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+
 function handleGoogleLogin() {
-    window.location.href = "http://127.0.0.1:8000/api/auth/google/";
+    window.location.href = `${API_BASE}/auth/google/`;
 }
 
 function GoogleButton({ className = "" }) {
@@ -129,6 +145,140 @@ function InboxPreview() {
     );
 }
 
+// Signature element: a live-feed style preview of the real Automation Log
+// page. This is the page's single most important argument for a product
+// that acts inside someone's inbox on its own — you can see exactly what
+// it did, including the times it chose to do nothing.
+const FEED_META = {
+    auto_replied: {
+        label: "Auto-replied",
+        icon: <FiSend size={13} />,
+        badge: "bg-sage-dim text-sage",
+    },
+    draft_created: {
+        label: "Draft created",
+        icon: <FiEdit3 size={13} />,
+        badge: "bg-signal-dim text-signal",
+    },
+    skipped: {
+        label: "Skipped",
+        icon: <FiSkipForward size={13} />,
+        badge: "bg-paper text-faint",
+    },
+};
+
+const FEED = [
+    {
+        action: "auto_replied",
+        who: "m.osei",
+        detail: "Confirmed availability for Thursday's review call.",
+        when: "2m ago",
+    },
+    {
+        action: "draft_created",
+        who: "billing@vendor.io",
+        detail: "Drafted a reply flagging invoice #4471 for approval.",
+        when: "14m ago",
+    },
+    {
+        action: "skipped",
+        who: "legal@partnerco.com",
+        detail: "Contract terms need your judgment — left untouched.",
+        when: "41m ago",
+    },
+    {
+        action: "auto_replied",
+        who: "d.patel",
+        detail: "Sent the meeting-notes recap you approved the pattern for.",
+        when: "1h ago",
+    },
+];
+
+function AutomationFeed() {
+    return (
+        <div className="bg-paper-raised border border-line rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-line">
+                <span className="text-xs font-mono uppercase tracking-wider text-faint">
+                    Automation log
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-sage font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sage" />
+                    Live
+                </span>
+            </div>
+            <ul>
+                {FEED.map((item, i) => {
+                    const meta = FEED_META[item.action];
+                    return (
+                        <li
+                            key={i}
+                            className={`flex items-start gap-3 px-5 py-3.5 ${
+                                i !== FEED.length - 1
+                                    ? "border-b border-line"
+                                    : ""
+                            }`}
+                        >
+                            <span
+                                className={`shrink-0 mt-0.5 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium ${meta.badge}`}
+                            >
+                                {meta.icon}
+                                {meta.label}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm text-ink truncate">
+                                    {item.detail}
+                                </p>
+                                <p className="text-xs text-faint mt-0.5">
+                                    {item.who}
+                                </p>
+                            </div>
+                            <span className="shrink-0 text-xs text-faint font-mono">
+                                {item.when}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </div>
+    );
+}
+
+const STEPS = [
+    {
+        n: "01",
+        title: "Connect Gmail",
+        body: "One click, read-only to start. Signal never touches anything until you decide it should.",
+    },
+    {
+        n: "02",
+        title: "It reads before you do",
+        body: "Every new message is triaged, summarized, and matched against the patterns you've approved.",
+    },
+    {
+        n: "03",
+        title: "You stay the judge",
+        body: "Routine replies go out automatically. Anything uncertain waits as a draft — or gets skipped, logged, and left alone.",
+    },
+];
+
+const TRUST_POINTS = [
+    {
+        icon: <FiLock size={16} />,
+        title: "Your inbox stays yours",
+        body: "Signal reads and drafts inside your mailbox. Nothing is copied out except what it needs to do the job.",
+    },
+    {
+        icon: <FiEye size={16} />,
+        title: "Full audit trail",
+        body: "Every reply, draft, and skip is logged with the reasoning behind it — searchable any time.",
+    },
+    {
+        icon: <FiPower size={16} />,
+        title: "Off is always one click",
+        body: "Turn automation down to draft-only, or disconnect entirely. Nothing is permanent.",
+    },
+];
+
 const FEATURES = [
     {
         icon: <FiZap size={18} />,
@@ -172,11 +322,24 @@ export default function Landing() {
 
     return (
         <div className="min-h-screen bg-paper text-ink">
-            <header className="max-w-6xl mx-auto flex items-center justify-between px-6 py-6">
-                <span className="font-display text-xl tracking-tight">
-                    Signal
-                </span>
-                <GoogleButton className="text-sm py-2.5 px-4" />
+            <header className="sticky top-0 z-50 bg-paper/85 backdrop-blur-md border-b border-line">
+                <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+                    <span className="font-display text-xl tracking-tight">
+                        Signal
+                    </span>
+                    <nav className="hidden md:flex items-center gap-8 text-sm text-muted">
+                        <a href="#how-it-works" className="hover:text-ink transition-colors">
+                            How it works
+                        </a>
+                        <a href="#features" className="hover:text-ink transition-colors">
+                            Features
+                        </a>
+                        <a href="#trust" className="hover:text-ink transition-colors">
+                            Trust
+                        </a>
+                    </nav>
+                    <GoogleButton className="text-sm py-2.5 px-4" />
+                </div>
             </header>
 
             <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid lg:grid-cols-2 gap-14 items-center">
@@ -205,7 +368,30 @@ export default function Landing() {
                 <InboxPreview />
             </section>
 
-            <section className="border-t border-line">
+            <section id="how-it-works" className="border-t border-line scroll-mt-20">
+                <div className="max-w-6xl mx-auto px-6 py-16">
+                    <p className="text-xs font-mono uppercase tracking-widest text-faint mb-10">
+                        How it works
+                    </p>
+                    <div className="grid sm:grid-cols-3 gap-10">
+                        {STEPS.map((s) => (
+                            <div key={s.n}>
+                                <span className="font-display text-3xl text-signal/40">
+                                    {s.n}
+                                </span>
+                                <h3 className="font-semibold mt-3 mb-1.5">
+                                    {s.title}
+                                </h3>
+                                <p className="text-sm text-muted leading-relaxed">
+                                    {s.body}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            <section id="features" className="border-t border-line scroll-mt-20">
                 <div className="max-w-6xl mx-auto px-6 py-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {FEATURES.map((f) => (
                         <div key={f.title} className="relative pl-4">
@@ -226,10 +412,64 @@ export default function Landing() {
                 </div>
             </section>
 
-            <footer className="max-w-6xl mx-auto px-6 py-10 text-xs text-faint">
-                Built on the Gmail API. Your messages stay in your mailbox —
-                Signal only stores what it needs to keep your inbox
-                organized.
+            <section id="trust" className="border-t border-line scroll-mt-20">
+                <div className="max-w-6xl mx-auto px-6 py-16 grid lg:grid-cols-[1fr_1.1fr] gap-14 items-start">
+                    <div>
+                        <p className="text-xs font-mono uppercase tracking-widest text-faint mb-5">
+                            Autonomy you can audit
+                        </p>
+                        <h2 className="font-display text-3xl sm:text-4xl leading-[1.1] mb-5">
+                            It acts on your behalf.
+                            <br />
+                            You can see every reason why.
+                        </h2>
+                        <p className="text-muted leading-relaxed mb-8 max-w-md">
+                            Letting an AI touch your inbox only feels safe
+                            when it isn't a black box. Signal keeps a running
+                            record of everything it did or chose not to do —
+                            no reply, draft, or skip happens off the books.
+                        </p>
+                        <div className="space-y-6">
+                            {TRUST_POINTS.map((t) => (
+                                <div key={t.title} className="flex gap-3.5">
+                                    <div className="shrink-0 w-8 h-8 rounded-lg bg-paper-raised border border-line flex items-center justify-center text-signal">
+                                        {t.icon}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-sm mb-1">
+                                            {t.title}
+                                        </h3>
+                                        <p className="text-sm text-muted leading-relaxed">
+                                            {t.body}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <AutomationFeed />
+                </div>
+            </section>
+
+            <footer className="border-t border-line">
+                <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <p className="text-xs text-faint max-w-sm">
+                        Built on the Gmail API. Your messages stay in your
+                        mailbox — Signal only stores what it needs to keep
+                        your inbox organized.
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-faint">
+                        <FiMail size={13} />
+                        <span>Gmail</span>
+                        <span className="mx-1">·</span>
+                        <FiSliders size={13} />
+                        <span>Automations</span>
+                        <span className="mx-1">·</span>
+                        <FiBellOff size={13} />
+                        <span>Unsubscribe anytime</span>
+                    </div>
+                </div>
             </footer>
         </div>
     );
