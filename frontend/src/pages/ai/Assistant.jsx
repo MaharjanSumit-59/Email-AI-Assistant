@@ -62,6 +62,8 @@ export default function Assistant() {
         reply: null,
         tasks: null,
         decision: null,
+        attachmentsAnalyzed: [],
+        attachmentsSkipped: [],
     });
     const [loadingAction, setLoadingAction] = useState(null);
 
@@ -104,7 +106,14 @@ export default function Assistant() {
         setSelectedId(id);
         // Fresh email, fresh results — don't show stale AI output from
         // whatever was selected before.
-        setResults({ summary: null, reply: null, tasks: null, decision: null });
+        setResults({
+            summary: null,
+            reply: null,
+            tasks: null,
+            decision: null,
+            attachmentsAnalyzed: [],
+            attachmentsSkipped: [],
+        });
     };
 
     const runAction = async (action) => {
@@ -115,13 +124,28 @@ export default function Assistant() {
         try {
             if (action === "summarize") {
                 const data = await summarizeEmail(selectedId);
-                setResults((prev) => ({ ...prev, summary: data.summary }));
+                setResults((prev) => ({
+                    ...prev,
+                    summary: data.summary,
+                    attachmentsAnalyzed: data.attachments_analyzed || [],
+                    attachmentsSkipped: data.attachments_skipped || [],
+                }));
             } else if (action === "reply") {
                 const data = await generateReply(selectedId);
-                setResults((prev) => ({ ...prev, reply: data.reply }));
+                setResults((prev) => ({
+                    ...prev,
+                    reply: data.reply,
+                    attachmentsAnalyzed: data.attachments_analyzed || [],
+                    attachmentsSkipped: data.attachments_skipped || [],
+                }));
             } else if (action === "tasks") {
                 const data = await extractTasks(selectedId);
-                setResults((prev) => ({ ...prev, tasks: data.tasks }));
+                setResults((prev) => ({
+                    ...prev,
+                    tasks: data.tasks,
+                    attachmentsAnalyzed: data.attachments_analyzed || [],
+                    attachmentsSkipped: data.attachments_skipped || [],
+                }));
             } else if (action === "analyze") {
                 const data = await analyzeEmail(selectedId);
                 setResults({
@@ -129,6 +153,8 @@ export default function Assistant() {
                     reply: data.reply,
                     tasks: data.tasks,
                     decision: data.decision,
+                    attachmentsAnalyzed: data.attachments_analyzed || [],
+                    attachmentsSkipped: data.attachments_skipped || [],
                 });
             }
         } catch (err) {
@@ -308,6 +334,33 @@ export default function Assistant() {
                             {!hasResults && loadingAction === null && (
                                 <div className="bg-paper-raised border border-line rounded-xl p-10 text-center text-faint text-sm">
                                     Run an action above to see results here.
+                                </div>
+                            )}
+
+                            {(results.attachmentsAnalyzed.length > 0 ||
+                                results.attachmentsSkipped.length > 0) && (
+                                <div className="bg-paper-raised border border-line rounded-xl px-4 py-3 text-xs text-muted">
+                                    {results.attachmentsAnalyzed.length > 0 && (
+                                        <p>
+                                            📎 Read attachment
+                                            {results.attachmentsAnalyzed.length > 1
+                                                ? "s"
+                                                : ""}
+                                            :{" "}
+                                            {results.attachmentsAnalyzed.join(
+                                                ", "
+                                            )}
+                                        </p>
+                                    )}
+                                    {results.attachmentsSkipped.length > 0 && (
+                                        <p className="text-faint">
+                                            Skipped (unsupported or too
+                                            large):{" "}
+                                            {results.attachmentsSkipped.join(
+                                                ", "
+                                            )}
+                                        </p>
+                                    )}
                                 </div>
                             )}
 

@@ -7,35 +7,46 @@ from .services import (
 
 class TaskExtractor:
     """
-    Extracts action items from an email and stores them.
+    Extracts action items from an email (and its attachments) and
+    stores them.
     """
 
     def __init__(self):
         self.ai = GeminiService()
 
-    def extract(self, email_metadata, email_body):
+    def extract(self, email_metadata, email_body, parts=None, attachment_context=""):
 
-        # Check cache first
-        tasks = AIAnalysisService.get_tasks(
-            email_metadata
+        has_attachments = bool(parts) or bool(attachment_context)
+
+        # Skip the cache when attachments are involved, same reasoning
+        # as EmailSummarizer/EmailReplyGenerator.
+        if not has_attachments:
+            tasks = AIAnalysisService.get_tasks(
+                email_metadata
+            )
+
+            if tasks:
+                return tasks
+
+        prompt = extract_tasks(
+            email_body,
+            attachment_context=attachment_context,
+            has_binary_attachments=bool(parts),
         )
-
-        if tasks:
-            return tasks
-
-        prompt = extract_tasks(email_body)
 
         tasks = self.ai.generate(
             prompt=prompt,
             response_type="json",
+            parts=parts,
         )
 
         if not isinstance(tasks, list):
             tasks = []
 
-        AIAnalysisService.save_tasks(
-            email_metadata,
-            tasks,
-        )
+        if not has_attachments:
+            AIAnalysisService.save_tasks(
+                email_metadata,
+                tasks,
+            )
 
         return tasks

@@ -24,6 +24,7 @@ class GeminiService:
         prompt,
         response_type="text",
         system_instruction=None,
+        parts=None,
     ):
 
         try:
@@ -43,9 +44,15 @@ class GeminiService:
                     response_mime_type="application/json"
                 )
 
+            # `parts` carries extra multimodal content — e.g. image/PDF
+            # attachment bytes as google.genai.types.Part objects — that
+            # Gemini can read directly alongside the text prompt. When
+            # absent, behaviour is unchanged from a plain text prompt.
+            contents = [prompt, *parts] if parts else prompt
+
             response = self.client.models.generate_content(
                 model=settings.GEMINI_MODEL,
-                contents=prompt,
+                contents=contents,
                 config=config,
             )
 

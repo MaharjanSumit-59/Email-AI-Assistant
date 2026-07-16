@@ -14,9 +14,29 @@ from .decision_engine import DecisionEngine
 from .extractor import TaskExtractor
 from .models import EmailActionLog
 from .automation import EmailAutomationEngine
+from .attachment_reader import AttachmentReader
 
 from .translator import EmailTranslator
 from .models import EmailActionLog
+
+
+def _read_attachments(gmail, message_id, email, include_attachments):
+    """
+    Shared by every AI view below: when the email has attachments and
+    the caller hasn't opted out, downloads and reads the supported
+    ones (images/PDFs/.docx) so they can be passed into the Gemini
+    call alongside the email body.
+
+    Returns (parts, attachment_context, skipped_filenames,
+    analyzed_filenames) — all empty when there's nothing to read or
+    the caller opted out.
+    """
+    attachments = email.get("attachments") or []
+
+    if not include_attachments or not attachments:
+        return [], "", [], []
+
+    return AttachmentReader(gmail).read(message_id, attachments)
 
 
 class SummarizeEmailAPIView(APIView):
@@ -34,6 +54,7 @@ class SummarizeEmailAPIView(APIView):
         )
 
         message_id = serializer.validated_data["message_id"]
+        include_attachments = serializer.validated_data["include_attachments"]
 
         gmail = get_gmail_service(request)
 
@@ -43,15 +64,24 @@ class SummarizeEmailAPIView(APIView):
             request.user,
             message_id,
         )
+
+        parts, attachment_context, skipped_attachments, analyzed_attachments = _read_attachments(
+            gmail, message_id, email, include_attachments,
+        )
+
         summary = EmailSummarizer().summarize(
             email_metadata,
             email["body"],
+            parts=parts,
+            attachment_context=attachment_context,
         )
 
         return Response(
             {
                 "message_id": message_id,
                 "summary": summary,
+                "attachments_analyzed": analyzed_attachments,
+                "attachments_skipped": skipped_attachments,
             }
         )
 
@@ -71,6 +101,7 @@ class GenerateReplyAPIView(APIView):
         )
 
         message_id = serializer.validated_data["message_id"]
+        include_attachments = serializer.validated_data["include_attachments"]
 
         gmail = get_gmail_service(request)
 
@@ -80,15 +111,24 @@ class GenerateReplyAPIView(APIView):
             request.user,
             message_id,
         )
+
+        parts, attachment_context, skipped_attachments, analyzed_attachments = _read_attachments(
+            gmail, message_id, email, include_attachments,
+        )
+
         reply = EmailReplyGenerator().generate(
             email_metadata,
             email["body"],
+            parts=parts,
+            attachment_context=attachment_context,
         )
 
         return Response(
             {
                 "message_id": message_id,
                 "reply": reply,
+                "attachments_analyzed": analyzed_attachments,
+                "attachments_skipped": skipped_attachments,
             }
         )
 
@@ -147,6 +187,7 @@ class AnalyzeEmailAPIView(APIView):
         )
 
         message_id = serializer.validated_data["message_id"]
+        include_attachments = serializer.validated_data["include_attachments"]
 
         gmail = get_gmail_service(request)
 
@@ -157,6 +198,10 @@ class AnalyzeEmailAPIView(APIView):
             message_id,
         )
 
+        parts, attachment_context, skipped_attachments, analyzed_attachments = _read_attachments(
+            gmail, message_id, email, include_attachments,
+        )
+
         decision = DecisionEngine().analyze(
             email_metadata,
             email["body"],
@@ -165,16 +210,22 @@ class AnalyzeEmailAPIView(APIView):
         summary = EmailSummarizer().summarize(
             email_metadata,
             email["body"],
+            parts=parts,
+            attachment_context=attachment_context,
         )
 
         reply = EmailReplyGenerator().generate(
             email_metadata,
             email["body"],
+            parts=parts,
+            attachment_context=attachment_context,
         )
-        
+
         tasks = TaskExtractor().extract(
             email_metadata,
             email["body"],
+            parts=parts,
+            attachment_context=attachment_context,
         )
 
         return Response(
@@ -186,6 +237,8 @@ class AnalyzeEmailAPIView(APIView):
                 "reply": reply,
                 "decision": decision,
                 "tasks": tasks,
+                "attachments_analyzed": analyzed_attachments,
+                "attachments_skipped": skipped_attachments,
             }
         )
     
@@ -204,6 +257,7 @@ class ExtractTasksAPIView(APIView):
         )
 
         message_id = serializer.validated_data["message_id"]
+        include_attachments = serializer.validated_data["include_attachments"]
 
         gmail = get_gmail_service(request)
 
@@ -214,15 +268,23 @@ class ExtractTasksAPIView(APIView):
             message_id,
         )
 
+        parts, attachment_context, skipped_attachments, analyzed_attachments = _read_attachments(
+            gmail, message_id, email, include_attachments,
+        )
+
         tasks = TaskExtractor().extract(
             email_metadata,
             email["body"],
+            parts=parts,
+            attachment_context=attachment_context,
         )
 
         return Response(
             {
                 "message_id": message_id,
                 "tasks": tasks,
+                "attachments_analyzed": analyzed_attachments,
+                "attachments_skipped": skipped_attachments,
             }
         )
 

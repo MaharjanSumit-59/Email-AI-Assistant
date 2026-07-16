@@ -5,6 +5,39 @@ Each function returns a complete prompt that is sent to Gemini.
 """
 
 
+def _attachment_note(attachment_context: str = "", has_binary_attachments: bool = False) -> str:
+    """
+    Builds the extra instruction block appended to a prompt when the
+    email has readable attachments.
+
+    - `has_binary_attachments`: True when image/PDF attachments were
+      attached directly to this request as additional Gemini content
+      parts (see GeminiService.generate's `parts` argument) — the
+      model can see them, it just needs to be told to.
+    - `attachment_context`: extracted text from non-image/PDF
+      attachments (currently .docx), inlined here since Gemini can't
+      read those file types natively.
+    """
+
+    note = ""
+
+    if has_binary_attachments:
+        note += (
+            "\nThis email also has one or more image or PDF "
+            "attachments, provided to you directly as additional "
+            "content alongside this text. Read them and factor "
+            "what they show into your answer.\n"
+        )
+
+    if attachment_context:
+        note += (
+            "\nExtracted text from attached document(s):\n"
+            f"{attachment_context}\n"
+        )
+
+    return note
+
+
 # ==========================================================
 # EMAIL CLASSIFICATION
 # ==========================================================
@@ -98,24 +131,32 @@ Email:
 # EMAIL SUMMARY
 # ==========================================================
 
-def summarize_email(email_body: str) -> str:
+def summarize_email(
+    email_body: str,
+    attachment_context: str = "",
+    has_binary_attachments: bool = False,
+) -> str:
+
+    mentions_attachments = bool(attachment_context or has_binary_attachments)
 
     return f"""
 You are an AI email assistant.
 
-Summarize the email.
+Summarize the email{" and its attachments" if mentions_attachments else ""}.
 
 Rules:
 
-- Maximum 4 sentences.
+- Maximum {"6" if mentions_attachments else "4"} sentences.
 - Ignore signatures.
 - Ignore disclaimers.
 - Mention important names.
 - Mention dates.
 - Mention deadlines.
 - Mention requested actions.
+- If attachments are provided, summarize their key content too, not
+  just the email text.
 - Keep it concise.
-
+{_attachment_note(attachment_context, has_binary_attachments)}
 Email:
 
 {email_body}
@@ -126,11 +167,20 @@ Email:
 # REPLY GENERATION
 # ==========================================================
 
-def generate_reply(email_body: str) -> str:
+def generate_reply(
+    email_body: str,
+    attachment_context: str = "",
+    has_binary_attachments: bool = False,
+) -> str:
 
     return f"""
 You are an AI email assistant writing a reply on the recipient's
 behalf.
+
+If the email has attachments (provided as extracted text and/or
+directly as images/PDFs below), read them and use their content to
+inform the reply where relevant - e.g. confirming details from a
+document, or acknowledging what an image shows.
 
 First, read the tone of the email below and match it - don't apply
 one fixed style to every email:
@@ -164,7 +214,7 @@ Other rules:
   one-line question is fine.
 - End naturally, without a generic sign-off like "Best regards" for
   casual messages.
-
+{_attachment_note(attachment_context, has_binary_attachments)}
 Email:
 
 {email_body}
@@ -242,12 +292,16 @@ Email:
 # TASK EXTRACTION
 # ==========================================================
 
-def extract_tasks(email_body: str) -> str:
+def extract_tasks(
+    email_body: str,
+    attachment_context: str = "",
+    has_binary_attachments: bool = False,
+) -> str:
 
     return f"""
 You are an AI assistant specialized in extracting tasks from emails.
 
-Analyze the email and identify every actionable task.
+Analyze the email{" and any attachments" if (attachment_context or has_binary_attachments) else ""} and identify every actionable task.
 
 Return ONLY JSON.
 
@@ -269,8 +323,10 @@ Rules:
 - If a deadline is missing, use null.
 - If a person is missing, use null.
 - Extract every task separately.
+- Include tasks found only in an attachment (e.g. an action list in a
+  document or image), not just ones stated in the email body.
 - Keep task descriptions short and clear.
-
+{_attachment_note(attachment_context, has_binary_attachments)}
 Email:
 
 {email_body}

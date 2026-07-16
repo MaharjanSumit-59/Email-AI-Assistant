@@ -12,25 +12,36 @@ class EmailReplyGenerator:
 
         self.ai = GeminiService()
 
-    def generate(self, email_metadata, email_body):
+    def generate(self, email_metadata, email_body, parts=None, attachment_context=""):
 
-        reply = AIAnalysisService.get_reply(
-            email_metadata
+        has_attachments = bool(parts) or bool(attachment_context)
+
+        # Same reasoning as EmailSummarizer: an attachment-aware draft
+        # shouldn't be served from (or overwrite) the plain-text cache.
+        if not has_attachments:
+            reply = AIAnalysisService.get_reply(
+                email_metadata
+            )
+
+            if reply:
+                return reply
+
+        prompt = generate_reply(
+            email_body,
+            attachment_context=attachment_context,
+            has_binary_attachments=bool(parts),
         )
-
-        if reply:
-            return reply
-
-        prompt = generate_reply(email_body)
 
         reply = self.ai.generate(
             prompt,
             response_type="text",
+            parts=parts,
         )
 
-        AIAnalysisService.save_reply(
-            email_metadata,
-            reply,
-        )
+        if not has_attachments:
+            AIAnalysisService.save_reply(
+                email_metadata,
+                reply,
+            )
 
-        return reply
+        return reply    

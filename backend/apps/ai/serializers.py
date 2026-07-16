@@ -59,3 +59,11 @@ class AIAnalysisSerializer(serializers.ModelSerializer):
 
 class MessageIDSerializer(serializers.Serializer):
     message_id = serializers.CharField()
+
+    # When the email has readable attachments (images, PDFs, .docx),
+    # the AI actions read and factor them in by default. Callers can
+    # pass include_attachments: false to analyze the email text only.
+    include_attachments = serializers.BooleanField(
+        required=False,
+        default=True,
+    )
